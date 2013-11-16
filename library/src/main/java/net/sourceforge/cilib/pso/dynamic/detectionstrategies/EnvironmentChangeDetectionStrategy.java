@@ -11,6 +11,7 @@ import net.sourceforge.cilib.algorithm.population.HasNeighbourhood;
 import net.sourceforge.cilib.algorithm.population.HasTopology;
 import net.sourceforge.cilib.pso.dynamic.DynamicIterationStrategy;
 import net.sourceforge.cilib.util.Cloneable;
+import net.sourceforge.cilib.entity.Entity;
 
 /**
  * This abstract class defines the interface that detection strategies have to adhere to.
@@ -18,7 +19,7 @@ import net.sourceforge.cilib.util.Cloneable;
  * detect whether the environment has change during the course of an
  * {@link Algorithm algorithm's} execution.
  */
-public abstract class EnvironmentChangeDetectionStrategy implements Cloneable {
+public abstract class EnvironmentChangeDetectionStrategy implements Cloneable, ParticleBasedEnvironmentChangeDetectionStrategy {
     protected double epsilon = 0.0;
     protected int interval = 0;
 
@@ -45,6 +46,10 @@ public abstract class EnvironmentChangeDetectionStrategy implements Cloneable {
      */
     public abstract <E extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(E algorithm);
 
+    public <E extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(E algorithm, Entity entity){
+        return true;
+    }
+
     public void setEpsilon(double e) {
         if (e < 0.0) {
             throw new IllegalArgumentException("The epsilon value cannot be negative");
@@ -55,6 +60,13 @@ public abstract class EnvironmentChangeDetectionStrategy implements Cloneable {
 
     public double getEpsilon() {
         return epsilon;
+    }
+
+    public void setInterval(int interval) {
+        if (interval <= 0) {
+            throw new IllegalArgumentException("The number of consecutive iterations to pass cannot be <= 0");
+        }
+        this.interval = interval;
     }
 
     public void setIterationsModulus(int im) {

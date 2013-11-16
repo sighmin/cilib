@@ -16,19 +16,24 @@ import net.sourceforge.cilib.entity.Entity;
  * by detecting changes on a per entity basis, that is, the environment is specific
  * to the entity.
  */
-public class HiddenUnitPruneDetectionStrategy extends ParticleBasedEnvironmentChangeDetectionStrategy {
+public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetectionStrategy {
     private static final long serialVersionUID = 4079212153655661164L;
 
     public HiddenUnitPruneDetectionStrategy() {
     }
 
-    public HiddenUnitPruneDetectionStrategy(ParticleBasedEnvironmentChangeDetectionStrategy rhs) {
+    public HiddenUnitPruneDetectionStrategy(EnvironmentChangeDetectionStrategy rhs) {
         super(rhs);
     }
 
     @Override
     public HiddenUnitPruneDetectionStrategy getClone() {
         return new HiddenUnitPruneDetectionStrategy(this);
+    }
+
+    @Override
+    public <A extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(A algorithm) {
+        return true;
     }
 
     @Override

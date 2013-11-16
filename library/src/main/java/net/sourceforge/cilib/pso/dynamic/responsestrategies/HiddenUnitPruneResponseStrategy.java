@@ -23,7 +23,7 @@ import net.sourceforge.cilib.type.types.Real;
  *
  * @param <E> some {@link PopulationBasedAlgorithm population based algorithm}
  */
-public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends ParticleBasedEnvironmentChangeResponseStrategy {
+public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends EnvironmentChangeResponseStrategy {
     public HiddenUnitPruneResponseStrategy() {
     }
 
@@ -35,6 +35,7 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
     public HiddenUnitPruneResponseStrategy<E> getClone() {
         return new HiddenUnitPruneResponseStrategy<E>(this);
     }
+
 
     /**
      * Adds a single neuron to a new hidden layer in the cascade network and adds
@@ -102,5 +103,9 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
         //         curDynamicParticle.getVelocity().insert(addPosition, Real.valueOf(Double.NaN, bounds));
         //     }
         // }
+    }
+
+    @Override
+    public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm) {
     }
 }

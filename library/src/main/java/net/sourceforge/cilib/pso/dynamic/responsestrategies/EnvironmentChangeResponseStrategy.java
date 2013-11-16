@@ -50,11 +50,22 @@ public abstract class EnvironmentChangeResponseStrategy implements Cloneable {
         }
     }
 
+    public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void respond(A algorithm, Entity entity) {
+        performReaction(algorithm, entity);
+        if(hasMemory) {
+            updateNeighbourhoodBestEntities(algorithm.getTopology(), algorithm.getNeighbourhood());
+        }
+    }
+
     /**
      * This is the method responsible for responding that should be overridden by sub-classes.
      * @param algorithm
      */
     protected abstract <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm);
+
+    protected <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm, Entity entity){
+
+    }
 
     /**
      * TODO: The problem with this is that it is PSO specific. It uses {@link Particle particles}

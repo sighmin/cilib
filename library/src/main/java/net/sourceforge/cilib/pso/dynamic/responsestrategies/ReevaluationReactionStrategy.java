@@ -51,8 +51,7 @@ public class ReevaluationReactionStrategy<E extends SinglePopulationBasedAlgorit
      * {@inheritDoc}
      */
     @Override
-	protected <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(
-			A algorithm) {
+	protected <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm) {
         fj.data.List<? extends Entity> entities = algorithm.getTopology();
         int reevaluateCount = (int) Math.floor(reevaluationRatio * entities.length());
 

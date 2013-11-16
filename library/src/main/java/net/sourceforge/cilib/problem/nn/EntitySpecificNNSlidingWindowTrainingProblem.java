@@ -142,41 +142,7 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
             }
         }
 
-        if(currentIteration - changeFrequency * dataChangesCounter == 0 && currentIteration != previousIteration) { // update training & generalisation sets (slide the window)
-            try {
-                previousIteration = currentIteration;
-                dataChangesCounter++;
-
-                StandardPatternDataTable candidateSet = new StandardPatternDataTable();
-                for (int i = 0; i < stepSize; i++) {
-                    candidateSet.addRow((StandardPattern) dataTable.removeRow(0));
-                }
-
-                ShuffleOperator initialShuffler = new ShuffleOperator();
-                initialShuffler.operate(candidateSet);
-
-                int trainingStepSize = (int)(stepSize * trainingSetPercentage);
-                int validationStepSize = (int)(stepSize * validationSetPercentage);
-                int generalisationStepSize = stepSize - trainingStepSize - validationStepSize;
-
-                for (int t = 0; t < trainingStepSize; t++){
-                    trainingSet.removeRow(0);
-                    trainingSet.addRow(candidateSet.removeRow(0));
-                }
-
-                for (int t = 0; t < validationStepSize; t++){
-                    validationSet.removeRow(0);
-                    validationSet.addRow(candidateSet.removeRow(0));
-                }
-
-                for (int t = 0; t < generalisationStepSize; t++){
-                    generalisationSet.removeRow(0);
-                    generalisationSet.addRow(candidateSet.removeRow(0));
-                }
-            } catch (CIlibIOException exception) {
-                exception.printStackTrace();
-            }
-        }
+        this.moveTheWindow(currentIteration);
 
         neuralNetwork.setWeights((Vector) solution);
 
@@ -228,9 +194,12 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
         HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
 
         // rebuild architecture and set weights
-        Int num_hidden = particle.getNumHiddenUnits();
-        neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).setSize(num_hidden.intValue());
-        neuralNetwork.initialise();
+        Numeric numHidden = particle.getNumHiddenUnits();
+        Numeric currentNumHidden = Int.valueOf(neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).getSize());
+        if (numHidden.compareTo(currentNumHidden) != 0){
+            neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).setSize(numHidden.intValue());
+            neuralNetwork.initialise();
+        }
         neuralNetwork.setWeights(particle.getWeightVector());
 
         // calculate error

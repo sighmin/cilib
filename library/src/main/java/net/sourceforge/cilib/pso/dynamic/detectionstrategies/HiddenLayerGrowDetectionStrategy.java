@@ -16,19 +16,24 @@ import net.sourceforge.cilib.entity.Entity;
  * by detecting changes on a per entity basis, that is, the environment is specific
  * to the entity.
  */
-public class HiddenLayerGrowDetectionStrategy extends ParticleBasedEnvironmentChangeDetectionStrategy {
+public class HiddenLayerGrowDetectionStrategy extends EnvironmentChangeDetectionStrategy {
     private static final long serialVersionUID = 4079212153655661164L;
 
     public HiddenLayerGrowDetectionStrategy() {
     }
 
-    public HiddenLayerGrowDetectionStrategy(ParticleBasedEnvironmentChangeDetectionStrategy rhs) {
+    public HiddenLayerGrowDetectionStrategy(EnvironmentChangeDetectionStrategy rhs) {
         super(rhs);
     }
 
     @Override
     public HiddenLayerGrowDetectionStrategy getClone() {
         return new HiddenLayerGrowDetectionStrategy(this);
+    }
+
+    @Override
+    public <A extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(A algorithm) {
+        return true;
     }
 
     @Override

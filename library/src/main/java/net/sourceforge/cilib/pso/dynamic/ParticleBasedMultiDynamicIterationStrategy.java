@@ -9,8 +9,8 @@ package net.sourceforge.cilib.pso.dynamic;
 import net.sourceforge.cilib.algorithm.population.IterationStrategy;
 import net.sourceforge.cilib.problem.boundaryconstraint.BoundaryConstraint;
 import net.sourceforge.cilib.pso.PSO;
-import net.sourceforge.cilib.pso.dynamic.detectionstrategies.ParticleBasedEnvironmentChangeDetectionStrategy;
-import net.sourceforge.cilib.pso.dynamic.responsestrategies.ParticleBasedEnvironmentChangeResponseStrategy;
+import net.sourceforge.cilib.pso.dynamic.detectionstrategies.EnvironmentChangeDetectionStrategy;
+import net.sourceforge.cilib.pso.dynamic.responsestrategies.EnvironmentChangeResponseStrategy;
 import net.sourceforge.cilib.pso.iterationstrategies.SynchronousIterationStrategy;
 import net.sourceforge.cilib.entity.Entity;
 import java.util.LinkedList;
@@ -23,18 +23,17 @@ import java.util.List;
  */
 public class ParticleBasedMultiDynamicIterationStrategy implements IterationStrategy<PSO> {
 
-    private static final long serialVersionUID = -4441422301948289718L;
     private IterationStrategy<PSO> iterationStrategy;
-    private List<ParticleBasedEnvironmentChangeDetectionStrategy> detectionStrategies;
-    private List<ParticleBasedEnvironmentChangeResponseStrategy> responseStrategies;
+    private List<EnvironmentChangeDetectionStrategy> detectionStrategies;
+    private List<EnvironmentChangeResponseStrategy> responseStrategies;
 
     /**
      * Create a new instance of {@linkplain ParticleBasedMultiDynamicIterationStrategy}.
      */
     public ParticleBasedMultiDynamicIterationStrategy() {
         this.iterationStrategy = new SynchronousIterationStrategy();
-        this.detectionStrategies = new LinkedList();
-        this.responseStrategies = new LinkedList();
+        this.detectionStrategies = new LinkedList<EnvironmentChangeDetectionStrategy>();
+        this.responseStrategies = new LinkedList<EnvironmentChangeResponseStrategy>();
     }
 
     /**
@@ -43,8 +42,8 @@ public class ParticleBasedMultiDynamicIterationStrategy implements IterationStra
      */
     public ParticleBasedMultiDynamicIterationStrategy(ParticleBasedMultiDynamicIterationStrategy copy) {
         this.iterationStrategy = copy.iterationStrategy.getClone();
-        this.detectionStrategies = new LinkedList();
-        this.responseStrategies = new LinkedList();
+        this.detectionStrategies = new LinkedList<EnvironmentChangeDetectionStrategy>();
+        this.responseStrategies = new LinkedList<EnvironmentChangeResponseStrategy>();
         for (int i = 0; i < detectionStrategies.size(); ++i){
             this.detectionStrategies.set(i, copy.detectionStrategies.get(i).getClone());
             this.responseStrategies.set(i, copy.responseStrategies.get(i).getClone());
@@ -73,7 +72,6 @@ public class ParticleBasedMultiDynamicIterationStrategy implements IterationStra
      */
     @Override
     public void performIteration(PSO algorithm) {
-
         fj.data.List<? extends Entity> particles = algorithm.getTopology();
         for (Entity particle : particles){
             for (int i = 0; i < detectionStrategies.size(); ++i){
@@ -103,50 +101,50 @@ public class ParticleBasedMultiDynamicIterationStrategy implements IterationStra
     }
 
     /**
-     * Get the currently defined {@linkplain ParticleBasedEnvironmentChangeDetectionStrategy}.
-     * @return The current {@linkplain ParticleBasedEnvironmentChangeDetectionStrategy}.
+     * Get the currently defined {@linkplain EnvironmentChangeDetectionStrategy}.
+     * @return The current {@linkplain EnvironmentChangeDetectionStrategy}.
      */
-    public List<ParticleBasedEnvironmentChangeDetectionStrategy> getDetectionStrategies() {
+    public List<EnvironmentChangeDetectionStrategy> getDetectionStrategies() {
         return detectionStrategies;
     }
 
     /**
-     * Set the {@linkplain ParticleBasedEnvironmentChangeDetectionStrategy} to be used.
-     * @param detectionStrategies The {@linkplain ParticleBasedEnvironmentChangeDetectionStrategy} to set.
+     * Set the {@linkplain EnvironmentChangeDetectionStrategy} to be used.
+     * @param detectionStrategies The {@linkplain EnvironmentChangeDetectionStrategy} to set.
      */
-    public void setDetectionStrategy(List<ParticleBasedEnvironmentChangeDetectionStrategy> detectionStrategies) {
+    public void setDetectionStrategy(List<EnvironmentChangeDetectionStrategy> detectionStrategies) {
         this.detectionStrategies = detectionStrategies;
     }
 
     /**
      * Add a detection strategy to the list of detection strategies.
-     * @param strategy The {@linkplain ParticleBasedEnvironmentChangeDetectionStrategy} to add.
+     * @param strategy The {@linkplain EnvironmentChangeDetectionStrategy} to add.
      */
-    public void addDetectionStrategy(ParticleBasedEnvironmentChangeDetectionStrategy strategy){
+    public void addDetectionStrategy(EnvironmentChangeDetectionStrategy strategy){
         this.detectionStrategies.add(strategy);
     }
 
     /**
-     * Get the currently defined {@linkplain ParticleBasedEnvironmentChangeResponseStrategy},
-     * @return The current {@linkplain ParticleBasedEnvironmentChangeResponseStrategy}.
+     * Get the currently defined {@linkplain EnvironmentChangeResponseStrategy},
+     * @return The current {@linkplain EnvironmentChangeResponseStrategy}.
      */
-    public List<ParticleBasedEnvironmentChangeResponseStrategy> getResponseStrategy() {
+    public List<EnvironmentChangeResponseStrategy> getResponseStrategy() {
         return responseStrategies;
     }
 
     /**
-     * Set the current {@linkplain ParticleBasedEnvironmentChangeResponseStrategy} to use.
-     * @param responseStrategies The {@linkplain ParticleBasedEnvironmentChangeResponseStrategy} to set.
+     * Set the current {@linkplain EnvironmentChangeResponseStrategy} to use.
+     * @param responseStrategies The {@linkplain EnvironmentChangeResponseStrategy} to set.
      */
-    public void setResponseStrategy(List<ParticleBasedEnvironmentChangeResponseStrategy> responseStrategies) {
+    public void setResponseStrategy(List<EnvironmentChangeResponseStrategy> responseStrategies) {
         this.responseStrategies = responseStrategies;
     }
 
     /**
      * Add a response strategy to the list of response strategies.
-     * @param strategy The {@linkplain ParticleBasedEnvironmentChangeResponseStrategy} to add.
+     * @param strategy The {@linkplain EnvironmentChangeResponseStrategy} to add.
      */
-    public void addResponseStrategy(ParticleBasedEnvironmentChangeResponseStrategy strategy){
+    public void addResponseStrategy(EnvironmentChangeResponseStrategy strategy){
         this.responseStrategies.add(strategy);
     }
 

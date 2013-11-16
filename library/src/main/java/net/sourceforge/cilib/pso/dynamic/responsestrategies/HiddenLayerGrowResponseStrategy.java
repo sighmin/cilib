@@ -23,7 +23,7 @@ import net.sourceforge.cilib.type.types.Real;
  *
  * @param <E> some {@link PopulationBasedAlgorithm population based algorithm}
  */
-public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends ParticleBasedEnvironmentChangeResponseStrategy {
+public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends EnvironmentChangeResponseStrategy {
     public HiddenLayerGrowResponseStrategy() {
     }
 
@@ -103,5 +103,9 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         //         curDynamicParticle.getVelocity().insert(addPosition, Real.valueOf(Double.NaN, bounds));
         //     }
         // }
+    }
+
+    @Override
+    public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm) {
     }
 }

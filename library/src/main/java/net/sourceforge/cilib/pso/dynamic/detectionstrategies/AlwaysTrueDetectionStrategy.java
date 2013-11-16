@@ -10,6 +10,7 @@ package net.sourceforge.cilib.pso.dynamic.detectionstrategies;
 import net.sourceforge.cilib.algorithm.Algorithm;
 import net.sourceforge.cilib.algorithm.population.HasNeighbourhood;
 import net.sourceforge.cilib.algorithm.population.HasTopology;
+import net.sourceforge.cilib.entity.Entity;
 
 /**
  * Detection strategy that always return true. For environment that are constantly changing.
@@ -40,6 +41,10 @@ public class AlwaysTrueDetectionStrategy extends EnvironmentChangeDetectionStrat
      */
     @Override
     public <A extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(A algorithm) {
+        return true;
+    }
+
+    public <A extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(A algorithm, Entity entity) {
         return true;
     }
 
