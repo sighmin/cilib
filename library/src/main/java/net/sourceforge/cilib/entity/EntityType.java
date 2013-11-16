@@ -38,4 +38,15 @@ public enum EntityType {
         BOARD,
         POPULATION_ID;
     }
+
+    /**
+     * {@linkplain HeterogeneousNNChargedParticle} specific constants.
+     */
+    public enum HeteroNN {
+        NUM_HIDDEN,
+        BITMASK,
+        TRAINING_TREND,
+        GENERAL_TREND,
+        VALIDATION_TREND;
+    }
 }
