@@ -41,7 +41,7 @@ public class HiddenLayerGrowDetectionStrategy extends EnvironmentChangeDetection
         if (algorithm.getIterations() != 0 && algorithm.getIterations() % interval == 0) {
             boolean grow = false;
 
-            // detect grow conditions here
+            // detect grow conditions here - use particle error trends
 
             // get problem for fitness from within algorithm object
             // get partitioned data sets from problem

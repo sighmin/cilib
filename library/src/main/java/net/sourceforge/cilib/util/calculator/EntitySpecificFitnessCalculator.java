@@ -17,7 +17,6 @@ import net.sourceforge.cilib.problem.nn.EntitySpecificNNSlidingWindowTrainingPro
  * an Entity instance.
  */
 public class EntitySpecificFitnessCalculator implements FitnessCalculator<Entity> {
-    private static final long serialVersionUID = -5053760817332028741L;
 
     /**
      * {@inheritDoc}

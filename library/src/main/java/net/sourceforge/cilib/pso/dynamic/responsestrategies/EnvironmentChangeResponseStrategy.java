@@ -15,7 +15,7 @@ import net.sourceforge.cilib.util.Cloneable;
 /**
  * TODO: Complete this Javadoc.
  */
-public abstract class EnvironmentChangeResponseStrategy implements Cloneable {
+public abstract class EnvironmentChangeResponseStrategy implements Cloneable, ParticleBasedEnvironmentChangeResponseStrategy {
     protected boolean hasMemory = true;
 
     public EnvironmentChangeResponseStrategy() {
@@ -50,8 +50,22 @@ public abstract class EnvironmentChangeResponseStrategy implements Cloneable {
         }
     }
 
+    /**
+     * Entity specific response to a environment change detection.
+     * @param algorithm some {@link PopulationBasedAlgorithm} population based algorithm
+     * @param entity some {@link Entity} for which the environment is specific to
+     */
     public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void respond(A algorithm, Entity entity) {
         performReaction(algorithm, entity);
+    }
+
+    /**
+     * Exposes the updateNeighbourhoodBestEntities method if the particles have memory,
+     * specifically to be called ONCE, after responding to a change in every particles
+     * sepcific environment.
+     * @param algorithm some {@link PopulationBasedAlgorithm} population based algorithm
+     */
+    public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void updateNeighbourhoodBestEntities(A algorithm) {
         if(hasMemory) {
             updateNeighbourhoodBestEntities(algorithm.getTopology(), algorithm.getNeighbourhood());
         }
@@ -64,7 +78,7 @@ public abstract class EnvironmentChangeResponseStrategy implements Cloneable {
     protected abstract <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm);
 
     protected <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm, Entity entity){
-
+        throw new UnsupportedOperationException("Not implemented in sub class of EnvironmentChangeResponseStrategy");
     }
 
     /**

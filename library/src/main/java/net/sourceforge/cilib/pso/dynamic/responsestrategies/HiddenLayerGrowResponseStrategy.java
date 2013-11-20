@@ -48,7 +48,8 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
 
 
         // grow!
-        // System.out.println("grow response!");
+        
+        
 
 
 

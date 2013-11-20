@@ -11,23 +11,45 @@ import net.sourceforge.cilib.problem.Problem;
 import net.sourceforge.cilib.problem.nn.NNTrainingProblem;
 import net.sourceforge.cilib.problem.solution.InferiorFitness;
 import net.sourceforge.cilib.type.types.Int;
+import net.sourceforge.cilib.type.types.Real;
 import net.sourceforge.cilib.type.types.container.Vector;
 
+import java.util.LinkedList;
+import java.util.List;
 /**
  * Charged Particle used by charged PSO (ChargedVelocityProvider). The only
  * difference from DynamicParticle is that a charged particle stores the charge
  * magnitude and the initialisation strategy for charge.
  *
- *
+ * HeterogeneousNNChargedParticle contains a different NN architecture per entity,
+ * as well as stores conditions on which the algorithm may grow/prune the size of
+ * the architecture.
  */
 public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
-    public HeterogeneousNNChargedParticle() {
+    protected int trendLength = 5;
+    protected List<Real> errorTrendTraining;
+    protected List<Real> errorTrendGeneralisation;
+    protected List<Real> errorTrendValidation;
 
+    public HeterogeneousNNChargedParticle() {
+        this.errorTrendTraining = new LinkedList<Real>();
+        this.errorTrendGeneralisation = new LinkedList<Real>();
+        this.errorTrendValidation = new LinkedList<Real>();
     }
 
     public HeterogeneousNNChargedParticle(HeterogeneousNNChargedParticle copy) {
         super(copy);
+        this.trendLength = copy.getTrendLength();
+        // copy trends
+        this.errorTrendTraining = new LinkedList<Real>();
+        this.errorTrendGeneralisation = new LinkedList<Real>();
+        this.errorTrendValidation = new LinkedList<Real>();
+        for (int i = 0; i < errorTrendTraining.size(); ++i){
+            this.errorTrendTraining.add(copy.errorTrendTraining.get(i));
+            this.errorTrendGeneralisation.add(copy.errorTrendGeneralisation.get(i));
+            this.errorTrendValidation.add(copy.errorTrendValidation.get(i));
+        }
     }
 
     @Override
@@ -39,9 +61,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
     public void initialise(Problem problem) {
         super.initialise(problem);
 
-        // init NN parameters
-        //this.getProperties().put(EntityType.Particle.VELOCITY, Vector.copyOf((Vector) getCandidateSolution()));
-
         // hidden units
         int num_hidden = ((NNTrainingProblem) problem).getNeuralNetwork().
             getArchitecture().
@@ -50,6 +69,10 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
             get(1).getSize();
         this.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden));
         this.getProperties().put(EntityType.HeteroNN.BITMASK, Vector.fill(Int.valueOf(1), getCandidateSolution().size()) );
+
+        this.getProperties().put(EntityType.HeteroNN.TRAINING_TREND, Real.valueOf(0.0));
+        this.getProperties().put(EntityType.HeteroNN.GENERAL_TREND, Real.valueOf(0.0));
+        this.getProperties().put(EntityType.HeteroNN.VALIDATION_TREND, Real.valueOf(0.0));
     }
 
     /**
@@ -83,5 +106,33 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
             }
         }
         return weightVectorBuilder.build();
+    }
+
+    /**
+     * Updates the particle specific error trends over the trend length for all
+     * partitioned data sets training, generalisation and validation.
+     */
+    public void updateErrorTrends(){
+        // throw new UnsupportedOperationException("Not Implemented!");
+
+        // calc generalisation error & update trend
+        // calc validation error & update trend
+        // update training error trend
+    }
+
+    public void setTrendLength(int trendLength){
+        this.trendLength = trendLength;
+    }
+
+    public int getTrendLength(){
+        return this.trendLength;
+    }
+
+    public void setErrorTrendTraining(List<Real> errors){
+        this.errorTrendTraining = errors;
+    }
+
+    public List<Real> getErrorTrendTraining(){
+        return this.errorTrendTraining;
     }
 }

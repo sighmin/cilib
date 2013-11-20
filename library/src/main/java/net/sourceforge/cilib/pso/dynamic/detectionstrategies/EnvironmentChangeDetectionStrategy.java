@@ -46,10 +46,20 @@ public abstract class EnvironmentChangeDetectionStrategy implements Cloneable, P
      */
     public abstract <E extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(E algorithm);
 
+    /**
+     * Check the environment in which the specific entities environment changes.
+     * @param algorithm The <tt>PSO</tt> that runs in a dynamic environment.
+     * @param entity The <tt>Entity</tt> containing the environment to test.
+     * @return true if any changes are detected, false otherwise
+     */
     public <E extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(E algorithm, Entity entity){
-        return true;
+        throw new UnsupportedOperationException("Not implemented in sub class of EnvironmentChangeDetectionStrategy.");
     }
 
+    /**
+     * Sets epsilon, the environment change significance indicator.
+     * @param e The value of epsilon
+     */
     public void setEpsilon(double e) {
         if (e < 0.0) {
             throw new IllegalArgumentException("The epsilon value cannot be negative");
@@ -58,10 +68,18 @@ public abstract class EnvironmentChangeDetectionStrategy implements Cloneable, P
         epsilon = e;
     }
 
+    /**
+     * Gets epsilon, the environment change significance indicator.
+     * @return epsilon The change significance indicator
+     */
     public double getEpsilon() {
         return epsilon;
     }
 
+    /**
+     * Sets interval, the frequency (in number of iterations) that the detection condition is tested.
+     * @param interval The frequency
+     */
     public void setInterval(int interval) {
         if (interval <= 0) {
             throw new IllegalArgumentException("The number of consecutive iterations to pass cannot be <= 0");
@@ -69,6 +87,10 @@ public abstract class EnvironmentChangeDetectionStrategy implements Cloneable, P
         this.interval = interval;
     }
 
+    /**
+     * Sets interval, the frequency (in number of iterations) that the detection condition is tested.
+     * @param interval The frequency
+     */
     public void setIterationsModulus(int im) {
         if (im <= 0) {
             throw new IllegalArgumentException("The number of consecutive iterations to pass cannot be <= 0");
@@ -77,6 +99,10 @@ public abstract class EnvironmentChangeDetectionStrategy implements Cloneable, P
         interval = im;
     }
 
+    /**
+     * Gets the frequency of change detection, interval
+     * @return interval The frequency
+     */
     public int getIterationsModulus() {
         return interval;
     }

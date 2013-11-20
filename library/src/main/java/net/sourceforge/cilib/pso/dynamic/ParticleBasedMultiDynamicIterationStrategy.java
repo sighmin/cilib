@@ -73,6 +73,13 @@ public class ParticleBasedMultiDynamicIterationStrategy implements IterationStra
     @Override
     public void performIteration(PSO algorithm) {
         fj.data.List<? extends Entity> particles = algorithm.getTopology();
+
+        // Update particles error trends
+        for (Entity particle : particles){
+            ((HeterogeneousNNChargedParticle) particle).updateErrorTrends();
+        }
+
+        // Iterate detection & response strategies (Grow & Prune NN's if conditions fired)
         for (Entity particle : particles){
             for (int i = 0; i < detectionStrategies.size(); ++i){
                 if (detectionStrategies.get(i).detect(algorithm, particle)){

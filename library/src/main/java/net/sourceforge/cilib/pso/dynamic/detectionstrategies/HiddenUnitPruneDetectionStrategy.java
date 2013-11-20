@@ -41,7 +41,7 @@ public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetection
         if (algorithm.getIterations() != 0 && algorithm.getIterations() % interval == 0) {
             boolean grow = false;
 
-            // detect prune conditions here
+            // sensitiviy analysis
 
             // get problem for fitness from within algorithm object
             // get partitioned data sets from problem
