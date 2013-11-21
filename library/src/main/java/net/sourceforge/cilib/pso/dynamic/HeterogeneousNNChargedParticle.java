@@ -76,6 +76,25 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
     }
 
     /**
+     * Determines whether the solution vector has irrelevant dimension that can be used to 
+     * grow the network, determined using the bitmask 1 as relevant value, and 0 as irrelevant.
+     * @return boolean if the solution vector is saturated with relevant values or not
+     */
+    public boolean isSolutionVectorSaturated(){
+        Vector bitmask = (Vector) this.getProperties().get(EntityType.HeteroNN.BITMASK);
+        for (int i = 0; i < bitmask.size(); ++i){
+            if (bitmask.get(i).intValue() == 0){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void setNumHiddenUnits(int num_hidden){
+        this.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden));
+    }
+
+    /**
      * @return the number of hidden units of this particle's architecture
      */
     public Int getNumHiddenUnits(){
