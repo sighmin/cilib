@@ -9,10 +9,14 @@ package net.sourceforge.cilib.pso.dynamic;
 import net.sourceforge.cilib.entity.EntityType;
 import net.sourceforge.cilib.problem.Problem;
 import net.sourceforge.cilib.problem.nn.NNTrainingProblem;
+import net.sourceforge.cilib.problem.nn.EntitySpecificNNSlidingWindowTrainingProblem;
+import net.sourceforge.cilib.problem.Problem;
 import net.sourceforge.cilib.problem.solution.InferiorFitness;
 import net.sourceforge.cilib.type.types.Int;
 import net.sourceforge.cilib.type.types.Real;
 import net.sourceforge.cilib.type.types.container.Vector;
+import net.sourceforge.cilib.math.Stats;
+
 
 import java.util.LinkedList;
 import java.util.ArrayList;
@@ -26,36 +30,39 @@ import java.util.List;
  * HeterogeneousNNChargedParticle contains a different NN architecture per entity,
  * as well as stores conditions on which the algorithm may grow/prune the size of
  * the architecture.
+ *
+ * The default error measure is % incorrectly classified (minimization problem),
+ * for classification problems.
  */
 public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
-    protected int trendLength = 5;
-    protected List<Real> errorTrendTraining;
-    protected List<Real> errorTrendGeneralisation;
-    protected List<Real> errorTrendValidation;
+    protected int trendLength = Integer.MAX_VALUE;
+    protected List<Double> errorTrendTraining;
+    protected List<Double> errorTrendGeneralisation;
+    protected List<Double> errorTrendValidation;
     // sensitivity analysis variables
     protected Double VARIANCE_OUTPUT = 0.0;
-    protected List<Double> variances = new ArrayList<Double>();
+    protected List<Double>  variances       = new ArrayList<Double>();
     protected List<Integer> hiddenPositions = new ArrayList<Integer>(); // logical identifiers for Yj - it's position in the array that's possibly larger than it's architecture
-    protected List<Integer> hiddenIndexes = new ArrayList<Integer>();   // physical identifiers for Yj - means actual j of the architecture
+    protected List<Integer> hiddenIndexes   = new ArrayList<Integer>();   // physical identifiers for Yj - means actual j of the architecture
 
     public HeterogeneousNNChargedParticle() {
-        this.errorTrendTraining = new LinkedList<Real>();
-        this.errorTrendGeneralisation = new LinkedList<Real>();
-        this.errorTrendValidation = new LinkedList<Real>();
+        this.errorTrendTraining = new LinkedList<Double>();
+        this.errorTrendGeneralisation = new LinkedList<Double>();
+        this.errorTrendValidation = new LinkedList<Double>();
     }
 
     public HeterogeneousNNChargedParticle(HeterogeneousNNChargedParticle copy) {
         super(copy);
         this.trendLength = copy.getTrendLength();
         // copy trends
-        this.errorTrendTraining = new LinkedList<Real>();
-        this.errorTrendGeneralisation = new LinkedList<Real>();
-        this.errorTrendValidation = new LinkedList<Real>();
+        this.errorTrendTraining = new LinkedList<Double>();
+        this.errorTrendGeneralisation = new LinkedList<Double>();
+        this.errorTrendValidation = new LinkedList<Double>();
         for (int i = 0; i < errorTrendTraining.size(); ++i){
-            this.errorTrendTraining.add(copy.errorTrendTraining.get(i).getClone());
-            this.errorTrendGeneralisation.add(copy.errorTrendGeneralisation.get(i).getClone());
-            this.errorTrendValidation.add(copy.errorTrendValidation.get(i).getClone());
+            this.errorTrendTraining.add(copy.errorTrendTraining.get(i));
+            this.errorTrendGeneralisation.add(copy.errorTrendGeneralisation.get(i));
+            this.errorTrendValidation.add(copy.errorTrendValidation.get(i));
         }
     }
 
@@ -76,10 +83,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
             get(1).getSize();
         this.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden));
         this.getProperties().put(EntityType.HeteroNN.BITMASK, Vector.fill(Int.valueOf(1), getCandidateSolution().size()) );
-
-        this.getProperties().put(EntityType.HeteroNN.TRAINING_TREND, Real.valueOf(0.0));
-        this.getProperties().put(EntityType.HeteroNN.GENERAL_TREND, Real.valueOf(0.0));
-        this.getProperties().put(EntityType.HeteroNN.VALIDATION_TREND, Real.valueOf(0.0));
     }
 
     /**
@@ -138,12 +141,52 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
      * Updates the particle specific error trends over the trend length for all
      * partitioned data sets training, generalisation and validation.
      */
-    public void updateErrorTrends(){
-        // throw new UnsupportedOperationException("Not Implemented!");
+    public void updateErrorTrends(Problem problem){
+        EntitySpecificNNSlidingWindowTrainingProblem nnProblem = (EntitySpecificNNSlidingWindowTrainingProblem) problem;
 
-        // calc generalisation error & update trend
-        // calc validation error & update trend
-        // update training error trend
+        // collect error measures
+        double trainingError = getFitness().getValue(); // fitness is calculated on an entity basis, as an MSE measure
+        double generalisationError = nnProblem.getMSEGeneralisationError(this);
+        double validationError = nnProblem.getMSEValidationError(this);
+
+        // update error trends
+        int length = errorTrendTraining.size();
+        if (length < trendLength){
+            errorTrendTraining.add(Double.valueOf(trainingError));
+            errorTrendGeneralisation.add(Double.valueOf(generalisationError));
+            errorTrendValidation.add(Double.valueOf(validationError));
+        } else {
+            ((LinkedList) errorTrendTraining).remove(); // removes head of list
+            errorTrendTraining.add(Double.valueOf(trainingError)); // adds to tail of list
+            ((LinkedList) errorTrendGeneralisation).remove(); // removes head of list
+            errorTrendGeneralisation.add(Double.valueOf(generalisationError)); // adds to tail of list
+            ((LinkedList) errorTrendValidation).remove(); // removes head of list
+            errorTrendValidation.add(Double.valueOf(validationError)); // adds to tail of list
+        }
+    }
+
+    public Double getAverageMovingTrainingError(){
+        return Stats.mean(errorTrendTraining);
+    }
+
+    public Double getAverageMovingGeneralisationError(){
+        return Stats.mean(errorTrendGeneralisation);
+    }
+
+    public Double getAverageMovingValidationError(){
+        return Stats.mean(errorTrendValidation);
+    }
+
+    public Double getSTDEVMovingTrainingError(){
+        return Stats.stdDev(errorTrendTraining);
+    }
+
+    public Double getSTDEVMovingGeneralisationError(){
+        return Stats.stdDev(errorTrendGeneralisation);
+    }
+
+    public Double getSTDEVMovingValidationError(){
+        return Stats.stdDev(errorTrendValidation);
     }
 
     public void setTrendLength(int trendLength){
@@ -154,12 +197,16 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         return this.trendLength;
     }
 
-    public void setErrorTrendTraining(List<Real> errors){
-        this.errorTrendTraining = errors;
+    public List<Double> getErrorTrendTraining(){
+        return this.errorTrendTraining;
     }
 
-    public List<Real> getErrorTrendTraining(){
-        return this.errorTrendTraining;
+    public List<Double> getErrorTrendGeneralisation(){
+        return this.errorTrendGeneralisation;
+    }
+
+    public List<Double> getErrorTrendValidation(){
+        return this.errorTrendValidation;
     }
 
     public void setVARIANCE_OUTPUT(Double d){

@@ -76,14 +76,20 @@ public class ParticleBasedMultiDynamicIterationStrategy implements IterationStra
 
         // Update particles error trends
         for (Entity particle : particles){
-            ((HeterogeneousNNChargedParticle) particle).updateErrorTrends();
+            ((HeterogeneousNNChargedParticle) particle).updateErrorTrends(algorithm.getOptimisationProblem());
         }
 
         // Iterate detection & response strategies (Grow & Prune NN's if conditions fired)
         for (Entity particle : particles){
             for (int i = 0; i < detectionStrategies.size(); ++i){
-                if (detectionStrategies.get(i).detect(algorithm, particle)){
-                    responseStrategies.get(i).respond(algorithm, particle);
+                try {
+                    if (detectionStrategies.get(i).detect(algorithm, particle)){
+                        responseStrategies.get(i).respond(algorithm, particle);
+                    }
+                } catch (UnsupportedOperationException e){ // attempt to run
+                    if (detectionStrategies.get(i).detect(algorithm)){
+                        responseStrategies.get(i).respond(algorithm);
+                    }
                 }
             }
         }

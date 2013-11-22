@@ -50,6 +50,8 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
     private int changeFrequency; // # algorithm iterations after which the window will slide
     private int windowSize; // number of patterns in the active set
 
+    private double classificationSensitivityThreshold = 0.2;
+
     /**
      * Default constructor.
      */
@@ -168,7 +170,7 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
      * weights to the solution and evaluating the training set in order to calculate
      * the MSE (which is minimized). Also checks whether the window has to be slided,
      * and slides the window when necessary by adjusting the training and generalisation sets.
-     * @param solution the weights representing a solution.
+     * @param entity the entity containing the entity specific NN architecture required to calc fitness
      * @return a new MinimisationFitness wrapping the MSE training error.
      */
     public Fitness getFitness(Entity entity) {
@@ -191,16 +193,7 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
         this.moveTheWindow(currentIteration);
 
         // calculate error
-        HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
-
-        // rebuild architecture and set weights
-        Numeric numHidden = particle.getNumHiddenUnits();
-        Numeric currentNumHidden = Int.valueOf(neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).getSize());
-        if (numHidden.compareTo(currentNumHidden) != 0){
-            neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).setSize(numHidden.intValue());
-            neuralNetwork.initialise();
-        }
-        neuralNetwork.setWeights(particle.getWeightVector());
+        this.reInitArchitecture(entity);
 
         // calculate error
         double errorTraining = 0.0;
@@ -261,6 +254,129 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
                 exception.printStackTrace();
             }
         }
+    }
+
+    private void reInitArchitecture(Entity entity){
+        HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
+
+        // rebuild architecture and set weights
+        Numeric numHidden = particle.getNumHiddenUnits();
+        Numeric currentNumHidden = Int.valueOf(neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).getSize());
+        if (numHidden.compareTo(currentNumHidden) != 0){
+            neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).setSize(numHidden.intValue());
+            neuralNetwork.initialise();
+        }
+        neuralNetwork.setWeights(particle.getWeightVector());
+    }
+
+    /**
+     * Gets the classification error for entity on the training set
+     * @return the training set classification error
+     */
+    public double getClassificationTrainingError(Entity entity) {
+        return getClassificationError(entity, trainingSet);
+    }
+
+    /**
+     * Gets the classification error for entity on the generalisation set
+     * @return the generalisation set classification error
+     */
+    public double getClassificationGeneralisationError(Entity entity) {
+        return getClassificationError(entity, generalisationSet);
+    }
+
+    /**
+     * Gets the validation error for entity on the training set
+     * @return the validation set classification error
+     */
+    public double getClassificationValidationError(Entity entity) {
+        return getClassificationError(entity, validationSet);
+    }
+
+    /**
+     * Private method to calculate the classification error (% incorrect classified patterns)
+     * for a given set of patterns.
+     * @param entity The entity for which the NN architecture is specific
+     * @param patterns The data table containing patterns to calculate the error on
+     */  
+    private double getClassificationError(Entity entity, StandardPatternDataTable patterns){
+        this.reInitArchitecture(entity);
+
+        int numberPatternsCorrect = 0;
+        int numberPatternsIncorrect = 0;
+        OutputErrorVisitor visitor = new OutputErrorVisitor();
+        Vector error = null;
+        for (StandardPattern pattern : patterns) {
+            neuralNetwork.evaluatePattern(pattern);
+            visitor.setInput(pattern);
+            neuralNetwork.getArchitecture().accept(visitor);
+            error = visitor.getOutput();
+            boolean isCorrect = true;
+            
+            for (Numeric real : error) {
+                if (Math.abs(real.doubleValue()) > this.classificationSensitivityThreshold) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+            if (isCorrect){
+                numberPatternsCorrect++;
+            } else {
+                numberPatternsIncorrect++;
+            }
+        }
+
+        double percentageIncorrect = (double) numberPatternsIncorrect / ((double) numberPatternsIncorrect + (double) numberPatternsCorrect);
+        return percentageIncorrect;
+    }
+
+    /**
+     * Get the MSE on the training set, using the entities specific architecture.
+     * @return the training MSE
+     */
+    public double getMSETrainingError(Entity entity){
+        return getMSE(entity, trainingSet);
+    }
+
+    /**
+     * Get the MSE on the generalisation set, using the entities specific architecture.
+     * @return the generalisation MSE
+     */
+    public double getMSEGeneralisationError(Entity entity){
+        return getMSE(entity, generalisationSet);
+    }
+
+    /**
+     * Get the MSE on the validation set, using the entities specific architecture.
+     * @return the validation MSE
+     */
+    public double getMSEValidationError(Entity entity){
+        return getMSE(entity, validationSet);
+    }
+
+    /**
+     * Private method to calculate the MSE for a given set of patterns.
+     * @param entity The entity for which the NN architecture is specific
+     * @param patterns The data table containing patterns to calculate the error on
+     */  
+    private double getMSE(Entity entity, StandardPatternDataTable patterns){
+        this.reInitArchitecture(entity);
+
+        // calculate error
+        double errorTraining = 0.0;
+        OutputErrorVisitor visitor = new OutputErrorVisitor();
+        Vector error = null;
+        for (StandardPattern pattern : patterns) {
+            Vector output = neuralNetwork.evaluatePattern(pattern);
+            visitor.setInput(pattern);
+            neuralNetwork.getArchitecture().accept(visitor);
+            error = visitor.getOutput();
+            for (Numeric real : error) {
+                errorTraining += real.doubleValue() * real.doubleValue();
+            }
+        }
+        errorTraining /= patterns.getNumRows() * error.size();
+        return errorTraining;
     }
 
     /**
@@ -352,5 +468,21 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
      */
     public void setWindowSize(int windowSize) {
         this.windowSize = windowSize;
+    }
+
+    /**
+     * Sets the classificationSensitivityThreshold
+     * @param classificationSensitivityThreshold The classification sensitivity threshold
+     */
+    public void setClassificationSensitivityThreshold(double classificationSensitivityThreshold){
+        this.classificationSensitivityThreshold = classificationSensitivityThreshold;
+    }
+
+    /**
+     * Gets the classificationSensitivityThreshold
+     * @return classification sensitivity threshold
+     */
+    public double getClassificationSensitivityThreshold(){
+        return this.classificationSensitivityThreshold;
     }
 }

@@ -24,6 +24,7 @@ import net.sourceforge.cilib.type.types.Numeric;
 import net.sourceforge.cilib.type.types.container.Vector;
 import net.sourceforge.cilib.type.types.container.TypeList;
 import net.sourceforge.cilib.type.types.Blackboard;
+import net.sourceforge.cilib.math.StatsTables;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -82,7 +83,7 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
         sortMultipleArrays(variances, hiddenPositions, hiddenIndexes);
 
         // find gamma_critical from Chi-Squared
-        Double gammaCritical = sampleChiSquared(degreesOfFreedom, 1 - significance);
+        Double gammaCritical = StatsTables.chisqrDistribution(degreesOfFreedom, 1 - significance); // Fix: check with Filipe about alpha param
 
         // for each gamma value
         for (int i = 0; i < variances.size(); ++i){
@@ -213,43 +214,6 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
         T temp = array.get(i1);
         array.set(i1, array.get(i2));
         array.set(i2, temp);
-    }
-
-
-    /**
-     * Chi-Squared Implementation adopted from
-     *     https://code.google.com/p/chi-squared-distance/source/browse/trunk/ChiSquared.java
-     * Gamma function is adopted from 
-     *     http://www.cs.princeton.edu/introcs/91float/Gamma.java.html
-     */
-    private static double logGamma(double x) {
-            double tmp = (x - 0.5) * Math.log(x + 4.5) - (x + 4.5);
-            double ser = 1.0 + 76.18009173    / (x + 0)   - 86.50532033    / (x + 1)
-            + 24.01409822    / (x + 2)   -  1.231739516   / (x + 3)
-            +  0.00120858003 / (x + 4)   -  0.00000536382 / (x + 5);
-            return tmp + Math.log(ser * Math.sqrt(2 * Math.PI));
-    }
-
-    /**
-     * Chi-Squared Implementation adopted from
-     *     https://code.google.com/p/chi-squared-distance/source/browse/trunk/ChiSquared.java
-     */
-    private static double gamma(double x) {
-        return Math.exp(logGamma(x));
-    }
-
-    /**
-     * Chi-Squared Implementation adopted from
-     *     https://code.google.com/p/chi-squared-distance/source/browse/trunk/ChiSquared.java
-     */
-    private double sampleChiSquared(int degreesOfFreedom, double significance) {
-        int k = degreesOfFreedom;
-        double x = significance;
-        double chi = 0;
-
-        chi = (Math.pow(x, ((double)k/2)-1) * Math.exp(-x/2)) / (Math.pow(2, (double)k/2) * gamma((double)k/2));
-
-        return chi;
     }
 
     @Override

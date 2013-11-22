@@ -54,7 +54,7 @@ public class HeterogeneousNNArchitectureMSEGeneralisationError implements Measur
 
         // get best particle (to retrieve it's NN architecture)
         java.util.List tmp = Lists.newArrayList(((SinglePopulationBasedAlgorithm) algorithm).getTopology());
-        java.util.Collections.sort(tmp, new SocialBestFitnessComparator());
+        java.util.Collections.sort(tmp, new SocialBestFitnessComparator()); // Fix: maybe not sorting properly?
         HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) tmp.get(tmp.size() - 1);
 
         // rebuild NN architecture if number of hidden units differs
