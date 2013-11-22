@@ -8,23 +8,39 @@ package net.sourceforge.cilib.pso.dynamic.responsestrategies;
 
 import net.sourceforge.cilib.algorithm.population.SinglePopulationBasedAlgorithm;
 import net.sourceforge.cilib.entity.Entity;
+import net.sourceforge.cilib.entity.EntityType;
 import net.sourceforge.cilib.nn.NeuralNetwork;
 import net.sourceforge.cilib.nn.architecture.builder.LayerConfiguration;
 import net.sourceforge.cilib.problem.nn.NNDataTrainingProblem;
 import net.sourceforge.cilib.pso.dynamic.DynamicParticle;
+import net.sourceforge.cilib.pso.dynamic.HeterogeneousNNChargedParticle;
 import net.sourceforge.cilib.pso.particle.Particle;
 import net.sourceforge.cilib.type.types.container.Vector;
 import net.sourceforge.cilib.type.types.Bounds;
 import net.sourceforge.cilib.type.types.Real;
+import net.sourceforge.cilib.type.types.Int;
+import net.sourceforge.cilib.type.types.Type;
+import net.sourceforge.cilib.type.types.Numeric;
+import net.sourceforge.cilib.type.types.container.Vector;
+import net.sourceforge.cilib.type.types.container.TypeList;
+import net.sourceforge.cilib.type.types.Blackboard;
+
+import java.util.List;
+import java.util.ArrayList;
 
 /**
- * This response strategy removes marked hidden units from a particle, and updates
- * it's solution vector bitmask to reflect the currently relevant dimensions/weights.
+ * This response strategy removes hidden units from a particle, and updates it's
+ * solution vector bitmask to reflect the currently relevant dimensions/weights.
  *
  * @param <E> some {@link PopulationBasedAlgorithm population based algorithm}
  */
 public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends EnvironmentChangeResponseStrategy {
+
+    // statics
+    public static double significance     = 0.01;
+
     public HiddenUnitPruneResponseStrategy() {
+
     }
 
     public HiddenUnitPruneResponseStrategy(HiddenUnitPruneResponseStrategy<E> rhs) {
@@ -46,66 +62,198 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
     @Override
     public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm, Entity entity) {
 
+        // get required variables
+        HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
+        NNDataTrainingProblem problem = (NNDataTrainingProblem) algorithm.getOptimisationProblem();
+        NeuralNetwork network = problem.getNeuralNetwork();
+        fj.data.List<? extends Entity> particles = algorithm.getTopology();
+        int I = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).getSize(); // input layer size
+        int J = getSizeOfLargestHiddenLayerInPopulation(particles);
+        int K = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(2).getSize(); // output layer size
 
-        // prune!
+        // get required particle variables
+        Double VARIANCE_OUTPUT = particle.getVARIANCE_OUTPUT(); // Fix: or must it always begin as 0.001?
+        List<Double> variances = particle.getVariances();
+        List<Integer> hiddenPositions = particle.getHiddenPositions();
+        List<Integer> hiddenIndexes   = particle.getHiddenIndexes();
+        int degreesOfFreedom = problem.getValidationSet().size() - 1;
+
+        // arrange gamma values in increasing order
+        sortMultipleArrays(variances, hiddenPositions, hiddenIndexes);
+
+        // find gamma_critical from Chi-Squared
+        Double gammaCritical = sampleChiSquared(degreesOfFreedom, 1 - significance);
+
+        // for each gamma value
+        for (int i = 0; i < variances.size(); ++i){
+            // if gamma(j) < gamma_critical
+            if (variances.get(i) < gammaCritical){
+                pruneParticle(
+                    particle, 
+                    hiddenIndexes.get(i),
+                    hiddenPositions.get(i), 
+                    I, J, K);
+                // remove hidden unit information
+                variances.remove(i);
+                hiddenPositions.remove(i);
+                hiddenIndexes.remove(i);
+            }
+        }
+        
+        // increase sigma_o if no pruning happened
+        boolean increase = true;
+        for (int i = 0; i < variances.size(); ++i){
+            if (variances.get(i) <= gammaCritical){
+                increase = false;
+                break;
+            }
+        }
+        // set variance output change on particle - Fix: may not be necessary
+        if (increase){
+            VARIANCE_OUTPUT *= 10;
+            particle.setVARIANCE_OUTPUT(VARIANCE_OUTPUT);
+        }
+    }
+
+    private void pruneParticle(Particle particle, int index, int pos, int I, int J, int K){
+        // return if no hidden units left to prune
+        if (((HeterogeneousNNChargedParticle)particle).getNumHiddenUnits().intValue() < 2){
+            return;
+        }
+
+        /* Logically prune particle */
+        // prune each vector of the particle & update bitmask
+        Bounds bounds = ((Vector) particle.getCandidateSolution()).get(0).getBounds();
+
+        // initial value for what is considered irrelevant dimensions in the vector wrt this particles architecture
+        Real init_val          = Real.valueOf(0.0, bounds);
+        Int irrelevant_boolean = Int.valueOf(0);
+
+        // get vectors
+        Vector candidateSolution = (Vector) particle.getProperties().get(EntityType.CANDIDATE_SOLUTION);
+        Vector previousSolution  = (Vector) particle.getProperties().get(EntityType.PREVIOUS_SOLUTION);
+        Vector bestPosition      = (Vector) particle.getProperties().get(EntityType.Particle.BEST_POSITION);
+        Vector velocity          = (Vector) particle.getProperties().get(EntityType.Particle.VELOCITY);
+        Vector bitmask           = (Vector) particle.getProperties().get(EntityType.HeteroNN.BITMASK);
+
+        // update particle vectors with new vectors
+        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     pruneVector(candidateSolution, index, pos, init_val, I, J, K));
+        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      pruneVector(previousSolution, index, pos, init_val, I, J, K));
+        particle.getProperties().put(EntityType.Particle.BEST_POSITION, pruneVector(bestPosition, index, pos, init_val, I, J, K));
+        particle.getProperties().put(EntityType.Particle.VELOCITY,      pruneVector(velocity, index, pos, init_val, I, J, K));
+        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       pruneVector(bitmask, index, pos, irrelevant_boolean, I, J, K));
+
+        /* Physically prune particle */
+        int num_hidden = ((Int) particle.getProperties().get(EntityType.HeteroNN.NUM_HIDDEN)).intValue();
+        particle.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden - 1));
+        // update 
+    }
+
+    private Vector pruneVector(Vector v, int index, int pos, Numeric init_val, int I, int J, int K){
+        // jump to hidden vector position
+        int limit = pos * (I+1);
+        int i = 0;
+        while (i < limit){
+            ++i;
+        }
+
+        // remove hidden unit weights
+        limit += I+1;
+        while (i < limit){
+            v.set(i, init_val);
+            ++i;
+        }
+
+        // remove hidden-output weights
+        // jump to base <- J*(I+1)
+        int base = J * (I+1);
+        i = base;
+
+        // for k = 0..K
+        int k = 0;
+        while (k < K){
+            v.set(base + (k * (J+1)) + pos, init_val); // To do: replace with non-deprecated method
+            ++k;
+        }
+
+        return v;
+    }
+
+    private int getSizeOfLargestHiddenLayerInPopulation(fj.data.List<? extends Entity> particles){
+        int largest = 0;
+        for (Entity p : particles){
+            int current = ((HeterogeneousNNChargedParticle) p).getNumHiddenUnits().intValue();
+            if (current > largest){
+                largest = current;
+            }
+        }
+
+        return largest;
+    }
+
+    private void sortMultipleArrays(List<Double> masterList, List<Integer>... slaveLists){/*<T extends Comparable<T>>*/
+        // bubble sort since the lists are short (size = num hidden units)
+        int n = masterList.size();
+        for (int c = 0; c < ( n - 1 ); c++) {
+            for (int d = 0; d < n - c - 1; d++) {
+                if (masterList.get(d).compareTo(masterList.get(d+1)) > 0){ /* For descending order use < */
+                    // swap master
+                    swap(masterList, d, d+1);
+
+                    // swap slaves
+                    for (List<Integer> list : slaveLists){
+                        swap(list, d, d+1); //Comparable
+                    }
+                }
+            }
+        }
+    }
+
+    private <T> void swap(List<T> array, int i1, int i2){
+        T temp = array.get(i1);
+        array.set(i1, array.get(i2));
+        array.set(i2, temp);
+    }
 
 
+    /**
+     * Chi-Squared Implementation adopted from
+     *     https://code.google.com/p/chi-squared-distance/source/browse/trunk/ChiSquared.java
+     * Gamma function is adopted from 
+     *     http://www.cs.princeton.edu/introcs/91float/Gamma.java.html
+     */
+    private static double logGamma(double x) {
+            double tmp = (x - 0.5) * Math.log(x + 4.5) - (x + 4.5);
+            double ser = 1.0 + 76.18009173    / (x + 0)   - 86.50532033    / (x + 1)
+            + 24.01409822    / (x + 2)   -  1.231739516   / (x + 3)
+            +  0.00120858003 / (x + 4)   -  0.00000536382 / (x + 5);
+            return tmp + Math.log(ser * Math.sqrt(2 * Math.PI));
+    }
 
+    /**
+     * Chi-Squared Implementation adopted from
+     *     https://code.google.com/p/chi-squared-distance/source/browse/trunk/ChiSquared.java
+     */
+    private static double gamma(double x) {
+        return Math.exp(logGamma(x));
+    }
 
+    /**
+     * Chi-Squared Implementation adopted from
+     *     https://code.google.com/p/chi-squared-distance/source/browse/trunk/ChiSquared.java
+     */
+    private double sampleChiSquared(int degreesOfFreedom, double significance) {
+        int k = degreesOfFreedom;
+        double x = significance;
+        double chi = 0;
 
+        chi = (Math.pow(x, ((double)k/2)-1) * Math.exp(-x/2)) / (Math.pow(2, (double)k/2) * gamma((double)k/2));
 
-
-
-
-
-
-
-
-        // NNDataTrainingProblem problem = (NNDataTrainingProblem)algorithm.getOptimisationProblem();
-        // NeuralNetwork network = problem.getNeuralNetwork();
-
-        // //add one new neuron to a new hidden layer
-        // LayerConfiguration targetLayerConfiguration = new LayerConfiguration();
-        // targetLayerConfiguration.setSize(1);
-        // network.getArchitecture().getArchitectureBuilder().addLayer(network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().size()-1, targetLayerConfiguration);
-        // network.initialise();
-
-        // //add new weights to all the particles in a manner that preserves the old weights
-        // fj.data.List<? extends Entity> particles = algorithm.getTopology();
-        // int nrOfLayers = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().size();
-        // int hiddenLayerSize = nrOfLayers -2;
-        // int outputLayerSize = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(nrOfLayers-1).getSize();
-        // int inputLayerSize = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).getSize();
-        // if (network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).isBias()) {
-        //     inputLayerSize += 1;
-        // }
-        // for (Entity curParticle : particles) {
-        //     DynamicParticle curDynamicParticle = (DynamicParticle)curParticle;
-        //     Bounds bounds = ((Vector) curDynamicParticle.getCandidateSolution()).get(0).getBounds();
-
-        //     //add weights of new neuron
-        //     int addPosition = inputLayerSize * (hiddenLayerSize-1);
-        //     addPosition += (hiddenLayerSize-2)*(hiddenLayerSize-1)/2;
-        //     for (int i = 0; i < inputLayerSize + hiddenLayerSize-1; ++i) {
-        //         ((Vector) curDynamicParticle.getCandidateSolution()).insert(addPosition, Real.valueOf(Double.NaN, bounds));
-        //         curDynamicParticle.getBestPosition().insert(addPosition, Real.valueOf(Double.NaN, bounds));
-        //         curDynamicParticle.getVelocity().insert(addPosition, Real.valueOf(Double.NaN, bounds));
-        //     }
-
-        //     //add weights between new neuron and output layer
-        //     int startAddPosition = inputLayerSize * hiddenLayerSize;
-        //     startAddPosition += (hiddenLayerSize-1)*hiddenLayerSize/2;
-        //     for (int curOutput = 0; curOutput < outputLayerSize; ++curOutput) {
-        //         addPosition = startAddPosition + (curOutput+1)*(inputLayerSize + hiddenLayerSize) -1;
-
-        //         ((Vector) curDynamicParticle.getCandidateSolution()).insert(addPosition, Real.valueOf(Double.NaN, bounds));
-        //         curDynamicParticle.getBestPosition().insert(addPosition, Real.valueOf(Double.NaN, bounds));
-        //         curDynamicParticle.getVelocity().insert(addPosition, Real.valueOf(Double.NaN, bounds));
-        //     }
-        // }
+        return chi;
     }
 
     @Override
     public <P extends Particle, A extends SinglePopulationBasedAlgorithm<P>> void performReaction(A algorithm) {
+        throw new UnsupportedOperationException("Not implemented");
     }
 }

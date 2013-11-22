@@ -15,7 +15,9 @@ import net.sourceforge.cilib.type.types.Real;
 import net.sourceforge.cilib.type.types.container.Vector;
 
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
+
 /**
  * Charged Particle used by charged PSO (ChargedVelocityProvider). The only
  * difference from DynamicParticle is that a charged particle stores the charge
@@ -31,6 +33,11 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
     protected List<Real> errorTrendTraining;
     protected List<Real> errorTrendGeneralisation;
     protected List<Real> errorTrendValidation;
+    // sensitivity analysis variables
+    protected Double VARIANCE_OUTPUT = 0.0;
+    protected List<Double> variances = new ArrayList<Double>();
+    protected List<Integer> hiddenPositions = new ArrayList<Integer>(); // logical identifiers for Yj - it's position in the array that's possibly larger than it's architecture
+    protected List<Integer> hiddenIndexes = new ArrayList<Integer>();   // physical identifiers for Yj - means actual j of the architecture
 
     public HeterogeneousNNChargedParticle() {
         this.errorTrendTraining = new LinkedList<Real>();
@@ -46,9 +53,9 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         this.errorTrendGeneralisation = new LinkedList<Real>();
         this.errorTrendValidation = new LinkedList<Real>();
         for (int i = 0; i < errorTrendTraining.size(); ++i){
-            this.errorTrendTraining.add(copy.errorTrendTraining.get(i));
-            this.errorTrendGeneralisation.add(copy.errorTrendGeneralisation.get(i));
-            this.errorTrendValidation.add(copy.errorTrendValidation.get(i));
+            this.errorTrendTraining.add(copy.errorTrendTraining.get(i).getClone());
+            this.errorTrendGeneralisation.add(copy.errorTrendGeneralisation.get(i).getClone());
+            this.errorTrendValidation.add(copy.errorTrendValidation.get(i).getClone());
         }
     }
 
@@ -153,5 +160,37 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
     public List<Real> getErrorTrendTraining(){
         return this.errorTrendTraining;
+    }
+
+    public void setVARIANCE_OUTPUT(Double d){
+        this.VARIANCE_OUTPUT = d;
+    }
+
+    public Double getVARIANCE_OUTPUT(){
+        return this.VARIANCE_OUTPUT;
+    }
+
+    public void setVariances(List<Double> variances){
+        this.variances = variances;
+    }
+
+    public List<Double> getVariances(){
+        return this.variances;
+    }
+
+    public void setHiddenIndexes(List<Integer> hiddenIndexes){
+        this.hiddenIndexes = hiddenIndexes;
+    }
+
+    public List<Integer> getHiddenIndexes(){
+        return this.hiddenIndexes;
+    }
+
+    public void setHiddenPositions(List<Integer> hiddenPositions){
+        this.hiddenPositions = hiddenPositions;
+    }
+
+    public List<Integer> getHiddenPositions(){
+        return this.hiddenPositions;
     }
 }

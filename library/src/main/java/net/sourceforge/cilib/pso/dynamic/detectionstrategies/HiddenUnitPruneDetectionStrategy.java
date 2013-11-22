@@ -10,6 +10,7 @@ import net.sourceforge.cilib.algorithm.Algorithm;
 import net.sourceforge.cilib.algorithm.population.HasNeighbourhood;
 import net.sourceforge.cilib.algorithm.population.HasTopology;
 import net.sourceforge.cilib.entity.Entity;
+import net.sourceforge.cilib.pso.dynamic.HeterogeneousNNChargedParticle;
 
 /**
  * This class implements {@link ParticleBasedEnvironmentChangeDetectionStrategy} 
@@ -33,24 +34,26 @@ public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetection
 
     @Override
     public <A extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(A algorithm) {
-        return true;
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public <A extends HasTopology & Algorithm & HasNeighbourhood> boolean detect(A algorithm, Entity entity) {
         if (algorithm.getIterations() != 0 && algorithm.getIterations() % interval == 0) {
-            boolean grow = false;
-
-            // sensitiviy analysis
-
-            // get problem for fitness from within algorithm object
-            // get partitioned data sets from problem
-
-            if (grow == true){
-                return true;
-            } else {
+            // return if NN is already at it's smallest, and overfitting is a result of something other than too many hidden units
+            int num_hidden = ((HeterogeneousNNChargedParticle) entity).getNumHiddenUnits().intValue();
+            if (num_hidden < 2){
                 return false;
             }
+
+            // sensitivity analysis (calc parameter nullity variance - "gamma Yj")
+            
+
+            // set results on particle blackboard
+
+
+            // return true to trigger prune response
+            return true;
         }
         return false;
     }
