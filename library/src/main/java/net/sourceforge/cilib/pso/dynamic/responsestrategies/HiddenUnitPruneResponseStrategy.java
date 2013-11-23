@@ -27,7 +27,7 @@ import net.sourceforge.cilib.type.types.Blackboard;
 import net.sourceforge.cilib.math.StatsTables;
 
 import java.util.List;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 /**
  * This response strategy removes hidden units from a particle, and updates it's
@@ -38,7 +38,7 @@ import java.util.ArrayList;
 public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends EnvironmentChangeResponseStrategy {
 
     // statics
-    public static double significance     = 0.01;
+    public static double significance = 0.01;
 
     public HiddenUnitPruneResponseStrategy() {
 
@@ -79,41 +79,59 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
         List<Integer> hiddenIndexes   = particle.getHiddenIndexes();
         int degreesOfFreedom = problem.getValidationSet().size() - 1;
 
-        // arrange gamma values in increasing order
-        sortMultipleArrays(variances, hiddenPositions, hiddenIndexes);
-
-        // find gamma_critical from Chi-Squared
-        Double gammaCritical = StatsTables.chisqrDistribution(degreesOfFreedom, 1 - significance); // Fix: check with Filipe about alpha param
-
-        // for each gamma value
-        for (int i = 0; i < variances.size(); ++i){
-            // if gamma(j) < gamma_critical
-            if (variances.get(i) < gammaCritical){
-                pruneParticle(
-                    particle, 
-                    hiddenIndexes.get(i),
-                    hiddenPositions.get(i), 
-                    I, J, K);
-                // remove hidden unit information
-                variances.remove(i);
-                hiddenPositions.remove(i);
-                hiddenIndexes.remove(i);
-            }
-        }
-        
-        // increase sigma_o if no pruning happened
+        // while nothing is pruned or sensitivities are high enough (all hidden units are declared 'relevant')
         boolean increase = true;
-        for (int i = 0; i < variances.size(); ++i){
-            if (variances.get(i) <= gammaCritical){
-                increase = false;
-                break;
+        while (increase){
+            // calculate gammas
+            LinkedList<Double> gammas = calcGammas((LinkedList<Double>)variances, VARIANCE_OUTPUT, degreesOfFreedom);
+
+            // arrange gamma values in increasing order
+            sortMultipleArrays(variances, hiddenPositions, hiddenIndexes);
+
+            // find gamma_critical from Chi-Squared
+            Double gammaCritical = StatsTables.chisqrDistribution(degreesOfFreedom, 1 - significance); // Fix: check with Filipe about alpha param
+
+            // for each gamma value
+            for (int i = 0; i < variances.size(); ++i){
+                if (Double.isNaN(variances.get(i))) { continue; } // no hidden unit exists at this index
+                // if gamma(j) < gamma_critical
+                if (variances.get(i) < gammaCritical){
+                    pruneParticle(
+                        particle, 
+                        hiddenIndexes.get(i),
+                        hiddenPositions.get(i), 
+                        I, J, K);
+                    // remove hidden unit information
+                    variances.remove(i);
+                    hiddenPositions.remove(i);
+                    hiddenIndexes.remove(i);
+                }
+            }
+            
+            // increase sigma_o if no pruning happened
+            for (int i = 0; i < variances.size(); ++i){
+                if (Double.isNaN(variances.get(i))) { continue; } // no hidden unit exists at this index
+                if (variances.get(i) <= gammaCritical){
+                    increase = false;
+                    break;
+                }
+            }
+            // set variance output change on particle - Fix: may not be necessary
+            if (increase){
+                VARIANCE_OUTPUT *= 10;
+                particle.setVARIANCE_OUTPUT(VARIANCE_OUTPUT);
             }
         }
-        // set variance output change on particle - Fix: may not be necessary
-        if (increase){
-            VARIANCE_OUTPUT *= 10;
-            particle.setVARIANCE_OUTPUT(VARIANCE_OUTPUT);
+    }
+
+    private LinkedList<Double> calcGammas(LinkedList<Double> variances, double VARIANCE_OUTPUT, int degreesOfFreedom){
+        LinkedList<Double> gammas = new LinkedList<Double>();
+        for (Double d : variances){
+            double gamma = (degreesOfFreedom * d) / VARIANCE_OUTPUT;
+            gammas.add(gamma);
         }
+
+        return gammas;
     }
 
     private void pruneParticle(Particle particle, int index, int pos, int I, int J, int K){

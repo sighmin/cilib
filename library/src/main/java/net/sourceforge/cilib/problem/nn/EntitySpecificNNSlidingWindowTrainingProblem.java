@@ -256,7 +256,7 @@ public class EntitySpecificNNSlidingWindowTrainingProblem extends NNTrainingProb
         }
     }
 
-    private void reInitArchitecture(Entity entity){
+    public void reInitArchitecture(Entity entity){
         HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
 
         // rebuild architecture and set weights
