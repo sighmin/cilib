@@ -41,7 +41,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
     protected static int overfittingTrendLength = 20;
     // following are used for grow detection 
     protected List<Double> errorTrendTraining;
-    protected List<Double> errorTrendGeneralisation;
     protected List<Double> errorTrendValidation;
     // following are used for overfitting detection
     protected List<Double> robelsFactorList;
@@ -55,7 +54,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
     public HeterogeneousNNChargedParticle() {
         this.errorTrendTraining = new LinkedList<Double>();
-        this.errorTrendGeneralisation = new LinkedList<Double>();
         this.errorTrendValidation = new LinkedList<Double>();
         this.robelsFactorList = new LinkedList<Double>();
         this.validationErrorList = new LinkedList<Double>();
@@ -65,13 +63,11 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         super(copy);
         // copy trends
         this.errorTrendTraining = new LinkedList<Double>();
-        this.errorTrendGeneralisation = new LinkedList<Double>();
         this.errorTrendValidation = new LinkedList<Double>();
         this.robelsFactorList = new LinkedList<Double>();
         this.validationErrorList = new LinkedList<Double>();
         for (int i = 0; i < errorTrendTraining.size(); ++i){
             this.errorTrendTraining.add(copy.errorTrendTraining.get(i));
-            this.errorTrendGeneralisation.add(copy.errorTrendGeneralisation.get(i));
             this.errorTrendValidation.add(copy.errorTrendValidation.get(i));
             this.robelsFactorList.add(copy.robelsFactorList.get(i));
             this.validationErrorList.add(copy.validationErrorList.get(i));
@@ -95,6 +91,7 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
             get(1).getSize();
         this.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden));
         this.getProperties().put(EntityType.HeteroNN.BITMASK, Vector.fill(Int.valueOf(1), getCandidateSolution().size()) );
+        this.getProperties().put(EntityType.HeteroNN.BEST_BITMASK, Vector.copyOf(this.getBitMask()) );
     }
 
     /**
@@ -131,11 +128,17 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
     }
 
     /**
+     * @return the bitmask indicating relevant dimensions of the solution vector
+     */
+    public Vector getBestBitMask(){
+        return (Vector) this.getProperties().get(EntityType.HeteroNN.BEST_BITMASK);
+    }
+
+    /**
      * Builds a weight vector with only this particles architectures relevant weights
      * @return the built weight vector
      */
     public Vector getWeightVector(){
-        // create architecture specific weight vector
         Vector maskedSolution = (Vector) this.getCandidateSolution();
         Vector mask = (Vector) this.getBitMask();
         Vector.Builder weightVectorBuilder = Vector.newBuilder();
@@ -150,6 +153,24 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
     }
 
     /**
+     * Builds a weight vector with only this particles architectures relevant weights
+     * for the best position, using the best bitmask, of this particle
+     * @return the built weight vector
+     */
+    public Vector getBestSolutionWeightVector(){
+        Vector maskedSolution = (Vector) this.getProperties().get(EntityType.Particle.BEST_POSITION);
+        Vector mask = (Vector) this.getBestBitMask();
+        Vector.Builder weightVectorBuilder = Vector.newBuilder();
+
+        for (int i = 0; i < maskedSolution.size(); ++i){
+            int bit = mask.get(i).intValue();
+            if (bit == 1){
+                weightVectorBuilder.add(maskedSolution.get(i));
+            }
+        }
+        return weightVectorBuilder.build();
+    }
+    /**
      * Updates the particle specific error trends over the trend length for all
      * partitioned data sets training, generalisation and validation.
      */
@@ -158,7 +179,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
         // collect error measures
         double trainingError = getFitness().getValue(); // fitness is calculated on an entity basis, as an MSE measure
-        double generalisationError = nnProblem.getMSEGeneralisationError(this);
         double validationError = nnProblem.getMSEValidationError(this);
         double robels_factor = validationError / trainingError;
         updatePreviousPhi();
@@ -167,18 +187,15 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         int length = errorTrendTraining.size();
         if (length < trendLength){
             errorTrendTraining.add(Double.valueOf(trainingError));
-            errorTrendGeneralisation.add(Double.valueOf(generalisationError));
             errorTrendValidation.add(Double.valueOf(validationError));
             robelsFactorList.add(Double.valueOf(robels_factor));
         } else {
             ((LinkedList) errorTrendTraining).remove(); // removes head of list
             errorTrendTraining.add(Double.valueOf(trainingError)); // adds to tail of list
-            ((LinkedList) errorTrendGeneralisation).remove(); // removes head of list
-            errorTrendGeneralisation.add(Double.valueOf(generalisationError)); // adds to tail of list
-            ((LinkedList) errorTrendValidation).remove(); // removes head of list
-            errorTrendValidation.add(Double.valueOf(validationError)); // adds to tail of list
-            ((LinkedList) robelsFactorList).remove(); // removes head of list
-            robelsFactorList.add(Double.valueOf(robels_factor)); // adds to tail of list
+            ((LinkedList) errorTrendValidation).remove();
+            errorTrendValidation.add(Double.valueOf(validationError));
+            ((LinkedList) robelsFactorList).remove();
+            robelsFactorList.add(Double.valueOf(robels_factor));
         }
 
         // update validationErrorList for overfitting detection
@@ -186,8 +203,8 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         if (length < overfittingTrendLength){
             validationErrorList.add(Double.valueOf(validationError));
         } else {
-            ((LinkedList) validationErrorList).remove(); // removes head of list
-            validationErrorList.add(Double.valueOf(validationError)); // adds to tail of list
+            ((LinkedList) validationErrorList).remove();
+            validationErrorList.add(Double.valueOf(validationError));
         }
 
         // update robels factor list for overfitting detection
@@ -195,8 +212,8 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         if (length < robelsTrendLength){
             robelsFactorList.add(Double.valueOf(robels_factor));
         } else {
-            ((LinkedList) robelsFactorList).remove(); // removes head of list
-            robelsFactorList.add(Double.valueOf(robels_factor)); // adds to tail of list
+            ((LinkedList) robelsFactorList).remove();
+            robelsFactorList.add(Double.valueOf(robels_factor));
         }
     }
 
@@ -218,10 +235,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         return Stats.mean(errorTrendTraining);
     }
 
-    public Double getAverageMovingGeneralisationError(){
-        return Stats.mean(errorTrendGeneralisation);
-    }
-
     public Double getAverageMovingValidationError(){
         return Stats.mean(errorTrendValidation);
     }
@@ -236,10 +249,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
     public Double getSTDEVMovingTrainingError(){
         return Stats.stdDev(errorTrendTraining);
-    }
-
-    public Double getSTDEVMovingGeneralisationError(){
-        return Stats.stdDev(errorTrendGeneralisation);
     }
 
     public Double getSTDEVMovingValidationError(){
@@ -272,10 +281,6 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
 
     public List<Double> getErrorTrendTraining(){
         return this.errorTrendTraining;
-    }
-
-    public List<Double> getErrorTrendGeneralisation(){
-        return this.errorTrendGeneralisation;
     }
 
     public List<Double> getErrorTrendValidation(){

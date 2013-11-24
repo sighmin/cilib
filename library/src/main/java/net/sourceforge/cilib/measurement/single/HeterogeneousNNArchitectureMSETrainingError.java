@@ -51,11 +51,9 @@ public class HeterogeneousNNArchitectureMSETrainingError implements Measurement 
         NNTrainingProblem problem = (NNTrainingProblem) algorithm.getOptimisationProblem();
         StandardPatternDataTable trainingSet = problem.getTrainingSet();
         NeuralNetwork neuralNetwork = problem.getNeuralNetwork();
-
-        // get best particle (to retrieve it's NN architecture)
-        java.util.List tmp = Lists.newArrayList(((SinglePopulationBasedAlgorithm) algorithm).getTopology());
-        java.util.Collections.sort(tmp, new SocialBestFitnessComparator());
-        HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) tmp.get(tmp.size() - 1);
+        HeterogeneousNNChargedParticle particle; // get best particle (to retrieve it's NN architecture)
+        particle = (HeterogeneousNNChargedParticle)
+            Topologies.getBestEntity( ((SinglePopulationBasedAlgorithm)algorithm).getTopology(), new SocialBestFitnessComparator<Particle>() );
 
         // rebuild NN architecture if number of hidden units differs
         Numeric numHidden = particle.getNumHiddenUnits();
@@ -66,7 +64,7 @@ public class HeterogeneousNNArchitectureMSETrainingError implements Measurement 
         }
 
         // set weight vector from best particle
-        neuralNetwork.setWeights(particle.getWeightVector());
+        neuralNetwork.setWeights(particle.getBestSolutionWeightVector());
 
         double errorTraining = 0.0;
         OutputErrorVisitor visitor = new OutputErrorVisitor();
