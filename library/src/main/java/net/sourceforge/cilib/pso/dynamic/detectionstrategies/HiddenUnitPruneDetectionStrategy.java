@@ -21,6 +21,8 @@ import net.sourceforge.cilib.nn.NeuralNetwork;
 import net.sourceforge.cilib.nn.architecture.visitors.OutputErrorVisitor;
 import net.sourceforge.cilib.problem.nn.NNDataTrainingProblem;
 import net.sourceforge.cilib.problem.nn.EntitySpecificNNSlidingWindowTrainingProblem;
+import net.sourceforge.cilib.controlparameter.ControlParameter;
+import net.sourceforge.cilib.controlparameter.ConstantControlParameter;
 
 import java.util.List;
 import java.util.LinkedList;
@@ -32,11 +34,15 @@ import java.util.LinkedList;
  */
 public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetectionStrategy {
 
+    private ControlParameter validationGrowSensitivity;
+
     public HiddenUnitPruneDetectionStrategy() {
+        this.validationGrowSensitivity = ConstantControlParameter.of(1.2);
     }
 
-    public HiddenUnitPruneDetectionStrategy(EnvironmentChangeDetectionStrategy rhs) {
+    public HiddenUnitPruneDetectionStrategy(HiddenUnitPruneDetectionStrategy rhs) {
         super(rhs);
+        this.validationGrowSensitivity = rhs.validationGrowSensitivity.getClone();
     }
 
     @Override
@@ -58,10 +64,32 @@ public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetection
                 return false;
             }
 
-            // Fix me: implement Robel's overfitting detection condition!!!
-            // Fix me: implement Ev trend detector condition!!!
+            EntitySpecificNNSlidingWindowTrainingProblem problem = (EntitySpecificNNSlidingWindowTrainingProblem) algorithm.getOptimisationProblem();
+            HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
+            boolean robels_overfit = false;
+            boolean ev_jump        = false;
 
-            return true;
+            // Fix me: implement Robel's overfitting detection condition!!!
+            LinkedList<Double> robelsList = ((LinkedList<Double>)particle.getRobelsFactorList());
+            double robels_factor = robelsList.peekLast();
+            double robels_avg_plus_stdev = particle.getAverageMovingRobelsFactor() + particle.getSTDEVRobelsFactor();
+            double robels_previous_phi = particle.getPreviousPhi();
+            double phi = Math.min( Math.min(robels_previous_phi, robels_avg_plus_stdev), 1.0 );
+
+            if (robels_factor > phi){
+                robels_overfit = true;
+            }
+
+            // Fix me: implement Ev trend detector condition!!!
+            double validationAvg   = particle.getAverageMovingOverfittingValidationError();
+            double validationSTDEV = particle.getSTDEVOverfittingValidationError();
+            double validationError = problem.getMSEValidationError(entity);
+            if (validationError > validationAvg + (validationGrowSensitivity.getParameter() * validationSTDEV)){
+                ev_jump = true;
+            }
+
+            boolean overfitting = (robels_overfit && ev_jump); // play with this to test conditions individually first
+            return overfitting;
         }
         return false;
     }

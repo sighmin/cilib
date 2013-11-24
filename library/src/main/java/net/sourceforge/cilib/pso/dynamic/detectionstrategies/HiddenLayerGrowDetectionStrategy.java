@@ -31,7 +31,7 @@ public class HiddenLayerGrowDetectionStrategy extends EnvironmentChangeDetection
     public HiddenLayerGrowDetectionStrategy() {
         this.windowSize = ConstantControlParameter.of(5);
         this.acceptableClassificationError = ConstantControlParameter.of(0.15);
-        this.errorSpikeSensitivity = ConstantControlParameter.of(3.0);
+        this.errorSpikeSensitivity = ConstantControlParameter.of(2.0);
     }
 
     public HiddenLayerGrowDetectionStrategy(HiddenLayerGrowDetectionStrategy rhs) {
