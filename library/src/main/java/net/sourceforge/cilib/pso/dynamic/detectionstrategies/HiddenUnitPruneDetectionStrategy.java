@@ -32,13 +32,6 @@ import java.util.LinkedList;
  */
 public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetectionStrategy {
 
-    private EntitySpecificNNSlidingWindowTrainingProblem problem;
-    private StandardPatternDataTable patterns;
-    private NeuralNetwork network;
-    private int I;
-    private int J;
-    private int K;
-
     public HiddenUnitPruneDetectionStrategy() {
     }
 
@@ -65,134 +58,11 @@ public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetection
                 return false;
             }
 
-            // collect required objects
-            HeterogeneousNNChargedParticle particle = (HeterogeneousNNChargedParticle) entity;
-            problem = (EntitySpecificNNSlidingWindowTrainingProblem) algorithm.getOptimisationProblem();
-            patterns = problem.getValidationSet();
-            problem.reInitArchitecture((Entity) particle);
-            network = problem.getNeuralNetwork();
-            I = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).getSize(); // input layer size
-            J = getSizeOfLargestHiddenLayerInPopulation(algorithm.getTopology());
-            K = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(2).getSize(); // output layer size
+            // Fix me: implement Robel's overfitting detection condition!!!
+            // Fix me: implement Ev trend detector condition!!!
 
-            // prepare hidden unit indexes
-            initHiddenUnitTrackingIndexes((Particle)particle);
-            List<Double>  variances       = particle.getVariances();
-            List<Integer> hiddenPositions = particle.getHiddenPositions();
-            List<Integer> hiddenIndexes   = particle.getHiddenIndexes();
-
-            // (c) for each hidden unit Yj
-            for (int i = 0; i < variances.size(); ++i){
-                if (Double.isNaN(variances.get(i))) { continue; }
-
-                // calc variance
-                double variance = getVariance((Particle)particle, hiddenPositions.get(i).intValue());
-                ((LinkedList<Double>) variances).set(i, variance);
-            }
-
-            // set results on particle blackboard
-            particle.setVariances(variances);
-            particle.setHiddenPositions(hiddenPositions);
-            particle.setHiddenIndexes(hiddenIndexes);
-
-            // (d) apply prune heuristic (part of response strategy)
-            return true; // return true regardless, response strategy decides whether to prune based on parameter sensitivity
+            return true;
         }
         return false;
-    }
-
-    private double getVariance(Particle particle, int j_pos){
-        double sum = 0.0;
-        LinkedList<Double> nullities = getNullities(particle, j_pos);
-        double nullityAvg = getNullityAverage(nullities);
-
-        for (int p = 0; p < patterns.size(); ++p){
-            double difference = nullities.get(p) - nullityAvg;
-            sum += Math.pow(difference , 2);
-        }
-
-        return sum / patterns.size();
-    }
-
-    private double getNullityAverage(LinkedList<Double> nullities){
-        double sum = 0.0;
-        for (Double d : nullities){
-            sum += d;
-        }
-        return sum / nullities.size();
-    }
-
-    private LinkedList<Double> getNullities(Particle particle, int j_pos){
-        LinkedList<Double> nullities = new LinkedList<Double>();
-
-        double nullity = 0.0;
-        OutputErrorVisitor visitor = new OutputErrorVisitor();
-        Vector error = null;
-        for (StandardPattern p : patterns) {
-            network.evaluatePattern(p);
-            visitor.setInput(p);
-            network.getArchitecture().accept(visitor);
-            error = visitor.getOutput();
-            int k = 0;
-            nullity = 0.0;
-            for (Numeric real : error) {
-                // real is Ok output for pattern p
-                double wkj = getWKJ((Vector) particle.getCandidateSolution(), k, j_pos);
-                double sensitivity = real.doubleValue() * (1 - real.doubleValue()) * wkj;
-                nullity += sensitivity;
-                ++k;
-            }
-            nullity = nullity / K; // for notational convenience, it's also the size of "error" above
-            nullities.add(nullity);
-        }
-        return nullities;
-    }
-
-    private double getWKJ(Vector v, int k, int j_pos){
-        double wkj;
-        int base = J * (I+1);
-        int final_index = base + (k * (J+1)) + j_pos;
-        wkj = v.get(final_index).doubleValue();
-
-        return wkj;
-    }
-
-    private void initHiddenUnitTrackingIndexes(Particle particle){
-        HeterogeneousNNChargedParticle nnParticle = (HeterogeneousNNChargedParticle) particle;
-        Vector bitmask = (Vector) particle.getProperties().get(EntityType.HeteroNN.BITMASK);
-        nnParticle.getVariances().clear();
-        nnParticle.getHiddenPositions().clear();
-        nnParticle.getHiddenPositions().clear();
-
-        int i = 0;
-        int base = J * (I+1);
-        int yj_index = 0;
-        int yj_pos = 0;
-        while (i < base){
-            nnParticle.getHiddenPositions().add(yj_pos);
-            if (bitmask.get(i).intValue() == 0){
-                nnParticle.getVariances().add(Double.NaN);
-                nnParticle.getHiddenIndexes().add(Integer.MIN_VALUE);
-            } else {
-                nnParticle.getVariances().add(0.0);
-                nnParticle.getHiddenIndexes().add(yj_index);
-                ++yj_index;
-            }
-
-            i += (I+1);
-            ++yj_pos;
-        }
-    }
-
-    private int getSizeOfLargestHiddenLayerInPopulation(fj.data.List<? extends Entity> particles){
-        int largest = 0;
-        for (Entity p : particles){
-            int current = ((HeterogeneousNNChargedParticle) p).getNumHiddenUnits().intValue();
-            if (current > largest){
-                largest = current;
-            }
-        }
-
-        return largest;
     }
 }
