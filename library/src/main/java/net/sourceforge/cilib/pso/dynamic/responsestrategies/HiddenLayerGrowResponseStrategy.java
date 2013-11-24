@@ -29,6 +29,11 @@ import net.sourceforge.cilib.pso.dynamic.HeterogeneousNNChargedParticle;
  * @param <E> some {@link PopulationBasedAlgorithm population based algorithm}
  */
 public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgorithm> extends EnvironmentChangeResponseStrategy {
+
+    private int I;
+    private int J;
+    private int K;
+
     public HiddenLayerGrowResponseStrategy() {
     }
 
@@ -55,29 +60,29 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         NNDataTrainingProblem problem = (NNDataTrainingProblem) algorithm.getOptimisationProblem();
         NeuralNetwork network = problem.getNeuralNetwork();
         fj.data.List<? extends Entity> particles = algorithm.getTopology();
-        int I = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).getSize(); // input layer size
-        int J = getSizeOfLargestHiddenLayerInPopulation(particles);
-        int K = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(2).getSize(); // output layer size
+        I = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).getSize(); // input layer size
+        J = getHiddenLayerSizeOf(entity);
+        K = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(2).getSize(); // output layer size
 
         if (targetParticle.isSolutionVectorSaturated()){
             // grow all other particles logically(size)
             for (Entity p : particles){
                 HeterogeneousNNChargedParticle currentParticle = (HeterogeneousNNChargedParticle) p;
                 if (currentParticle != targetParticle){ // don't logically grow the target particle yet
-                    growParticleLogically(currentParticle, I, J, K);
+                    growParticleLogically(currentParticle);
                 }
             }
 
             // grow entity logically(size) & physically(hidden units)
-            growParticlePhysically(targetParticle, I, J, K);
+            growParticlePhysically(targetParticle);
 
         } else {
             // find first open positions for new weights
-            growUnsaturatedParticle(targetParticle, I, J, K);
+            growUnsaturatedParticle(targetParticle);
         }
     }
 
-    private void growUnsaturatedParticle(Particle particle, int I, int J, int K){
+    private void growUnsaturatedParticle(Particle particle){
         /* Logically grow particle */
         Bounds bounds = ((Vector) particle.getCandidateSolution()).get(0).getBounds();
 
@@ -93,18 +98,18 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         Vector bitmask           = (Vector) particle.getProperties().get(EntityType.HeteroNN.BITMASK);
 
         // update particle vectors with new vectors
-        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     initNaNElements( growUnsaturated(candidateSolution, bitmask, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      initNaNElements( growUnsaturated(previousSolution, bitmask, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.Particle.BEST_POSITION, initNaNElements( growUnsaturated(bestPosition, bitmask, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.Particle.VELOCITY,      initNaNElements( growUnsaturated(velocity, bitmask, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       growUnsaturated(bitmask, bitmask, relevant_boolean, I, J, K));
+        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     initNaNElements( growUnsaturated(candidateSolution, bitmask, init_val)) );
+        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      initNaNElements( growUnsaturated(previousSolution, bitmask, init_val)) );
+        particle.getProperties().put(EntityType.Particle.BEST_POSITION, initNaNElements( growUnsaturated(bestPosition, bitmask, init_val)) );
+        particle.getProperties().put(EntityType.Particle.VELOCITY,      initNaNElements( growUnsaturated(velocity, bitmask, init_val)) );
+        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       growUnsaturated(bitmask, bitmask, relevant_boolean));
 
         /* Physically grow particle */
         int num_hidden = ((Int) particle.getProperties().get(EntityType.HeteroNN.NUM_HIDDEN)).intValue();
         particle.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden + 1));
     }
 
-    private Vector growUnsaturated(Vector vector, Vector bitmask, Numeric init_value, int I, int J, int K){
+    private Vector growUnsaturated(Vector vector, Vector bitmask, Numeric init_value){
 
         // assign pos <- first irrelevant slot        
         int index = 0;
@@ -142,7 +147,7 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         return vector;
     }
 
-    private void growParticleLogically(Particle particle, int I, int J, int K){
+    private void growParticleLogically(Particle particle){
         Bounds bounds = ((Vector) particle.getCandidateSolution()).get(0).getBounds();
 
         // initial value for what is considered irrelevant dimensions in the vector wrt this particles architecture
@@ -157,14 +162,14 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         Vector bitmask           = (Vector) particle.getProperties().get(EntityType.HeteroNN.BITMASK);
 
         // update particle vectors with new vectors
-        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     grow(candidateSolution, init_val, I, J, K));
-        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      grow(previousSolution, init_val, I, J, K));
-        particle.getProperties().put(EntityType.Particle.BEST_POSITION, grow(bestPosition, init_val, I, J, K));
-        particle.getProperties().put(EntityType.Particle.VELOCITY,      grow(velocity, init_val, I, J, K));
-        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       grow(bitmask, irrelevant_boolean, I, J, K));
+        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     grow(candidateSolution, init_val));
+        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      grow(previousSolution, init_val));
+        particle.getProperties().put(EntityType.Particle.BEST_POSITION, grow(bestPosition, init_val));
+        particle.getProperties().put(EntityType.Particle.VELOCITY,      grow(velocity, init_val));
+        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       grow(bitmask, irrelevant_boolean));
     }
 
-    private void growParticlePhysically(Particle particle, int I, int J, int K){
+    private void growParticlePhysically(Particle particle){
         /* Logically grow particle */
         Bounds bounds = ((Vector) particle.getCandidateSolution()).get(0).getBounds();
 
@@ -180,18 +185,18 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         Vector bitmask           = (Vector) particle.getProperties().get(EntityType.HeteroNN.BITMASK);
 
         // update particle vectors with new vectors
-        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     initNaNElements( grow(candidateSolution, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      initNaNElements( grow(previousSolution, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.Particle.BEST_POSITION, initNaNElements( grow(bestPosition, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.Particle.VELOCITY,      initNaNElements( grow(velocity, init_val, I, J, K)) );
-        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       grow(bitmask, relevant_boolean, I, J, K));
+        particle.getProperties().put(EntityType.CANDIDATE_SOLUTION,     initNaNElements( grow(candidateSolution, init_val)) );
+        particle.getProperties().put(EntityType.PREVIOUS_SOLUTION,      initNaNElements( grow(previousSolution, init_val)) );
+        particle.getProperties().put(EntityType.Particle.BEST_POSITION, initNaNElements( grow(bestPosition, init_val)) );
+        particle.getProperties().put(EntityType.Particle.VELOCITY,      initNaNElements( grow(velocity, init_val)) );
+        particle.getProperties().put(EntityType.HeteroNN.BITMASK,       grow(bitmask, relevant_boolean));
 
         /* Physically grow particle */
         int num_hidden = ((Int) particle.getProperties().get(EntityType.HeteroNN.NUM_HIDDEN)).intValue();
         particle.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden + 1));
     }
 
-    private Vector grow(Vector current_vector, Numeric init_value, int I, int J, int K){
+    private Vector grow(Vector current_vector, Numeric init_value){
         Vector.Builder new_vector = Vector.newBuilder();
 
         int index = 0;
@@ -236,16 +241,14 @@ public class HiddenLayerGrowResponseStrategy<E extends SinglePopulationBasedAlgo
         return vector;
     }
 
-    private int getSizeOfLargestHiddenLayerInPopulation(fj.data.List<? extends Entity> particles){
-        int largest = 0;
-        for (Entity p : particles){
-            int current = ((HeterogeneousNNChargedParticle) p).getNumHiddenUnits().intValue();
-            if (current > largest){
-                largest = current;
-            }
-        }
+    private int getHiddenLayerSizeOf(Entity entity){
+        int largest_hidden_layer_size = 0;
+        Vector solution = (Vector) entity.getCandidateSolution();
+        int size = solution.size();
 
-        return largest;
+        largest_hidden_layer_size = (size - K) / (I+K+1); // determines the # of HU's given I, K and the vector size.
+
+        return largest_hidden_layer_size;
     }
 
     @Override

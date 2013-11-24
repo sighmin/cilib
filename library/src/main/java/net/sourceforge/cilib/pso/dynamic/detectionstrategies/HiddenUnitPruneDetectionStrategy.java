@@ -69,7 +69,7 @@ public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetection
             boolean robels_overfit = false;
             boolean ev_jump        = false;
 
-            // Fix me: implement Robel's overfitting detection condition!!!
+            // Robels generlisation factor for overfitting test
             LinkedList<Double> robelsList = ((LinkedList<Double>)particle.getRobelsFactorList());
             double robels_factor = robelsList.peekLast();
             double robels_avg_plus_stdev = particle.getAverageMovingRobelsFactor() + particle.getSTDEVRobelsFactor();
@@ -80,7 +80,7 @@ public class HiddenUnitPruneDetectionStrategy extends EnvironmentChangeDetection
                 robels_overfit = true;
             }
 
-            // Fix me: implement Ev trend detector condition!!!
+            // Ev increase detection logic
             double validationAvg   = particle.getAverageMovingOverfittingValidationError();
             double validationSTDEV = particle.getSTDEVOverfittingValidationError();
             double validationError = problem.getMSEValidationError(entity);

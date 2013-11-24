@@ -84,7 +84,7 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
         problem.reInitArchitecture((Entity) particle);
         network = problem.getNeuralNetwork();
         I = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(0).getSize(); // input layer size
-        J = getSizeOfLargestHiddenLayerInPopulation(particles);
+        J = getHiddenLayerSizeOf(entity);
         K = network.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(2).getSize(); // output layer size
 
         // prepare hidden unit indexes
@@ -239,16 +239,14 @@ public class HiddenUnitPruneResponseStrategy<E extends SinglePopulationBasedAlgo
         return v;
     }
 
-    private int getSizeOfLargestHiddenLayerInPopulation(fj.data.List<? extends Entity> particles){
-        int largest = 0;
-        for (Entity p : particles){
-            int current = ((HeterogeneousNNChargedParticle) p).getNumHiddenUnits().intValue();
-            if (current > largest){
-                largest = current;
-            }
-        }
+    private int getHiddenLayerSizeOf(Entity entity){
+        int largest_hidden_layer_size = 0;
+        Vector solution = (Vector) entity.getCandidateSolution();
+        int size = solution.size();
 
-        return largest;
+        largest_hidden_layer_size = (size - K) / (I+K+1); // determines the # of HU's given I, K and the vector size.
+
+        return largest_hidden_layer_size;
     }
 
     private void sortMultipleArrays(List<Double> masterList, List<Integer>... slaveLists){/*<T extends Comparable<T>>*/
