@@ -63,9 +63,14 @@ public class BitmaskedDynamicStagnationPBestUpdateStrategy implements PersonalBe
         if (currentFitness.compareTo(bestFitness) > 0) {
             particle.getParticleBehavior().incrementSuccessCounter();
             particle.getProperties().put(EntityType.HeteroNN.BEST_BITMASK, particle.getProperties().get(EntityType.HeteroNN.BITMASK));
+            particle.getProperties().put(EntityType.HeteroNN.BEST_NUM_HIDDEN, particle.getProperties().get(EntityType.HeteroNN.NUM_HIDDEN));
             particle.getProperties().put(EntityType.Particle.BEST_FITNESS, particle.getFitness());
             particle.getProperties().put(EntityType.Particle.BEST_POSITION, particle.getCandidateSolution().getClone());
             return;
         }
+    }
+
+    public void setEpsilon(double epsilon){
+        this.epsilon = ConstantControlParameter.of(epsilon);
     }
 }

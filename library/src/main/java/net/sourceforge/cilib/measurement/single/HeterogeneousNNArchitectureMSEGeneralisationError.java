@@ -46,17 +46,15 @@ public class HeterogeneousNNArchitectureMSEGeneralisationError implements Measur
      */
     @Override
     public Type getValue(Algorithm algorithm) {
-
         // get problem, data and neural network objects
         NNTrainingProblem problem = (NNTrainingProblem) algorithm.getOptimisationProblem();
-        StandardPatternDataTable generalisationSet = problem.getTrainingSet();
+        StandardPatternDataTable dataset = problem.getGeneralisationSet();
         NeuralNetwork neuralNetwork = problem.getNeuralNetwork();
-        HeterogeneousNNChargedParticle particle; // get best particle (to retrieve it's NN architecture)
-        particle = (HeterogeneousNNChargedParticle)
+        HeterogeneousNNChargedParticle bestParticle = (HeterogeneousNNChargedParticle)
             Topologies.getBestEntity( ((SinglePopulationBasedAlgorithm)algorithm).getTopology(), new SocialBestFitnessComparator<Particle>() );
 
         // rebuild NN architecture if number of hidden units differs
-        Numeric numHidden = particle.getNumHiddenUnits();
+        Numeric numHidden = bestParticle.getBestNumHiddenUnits();
         Numeric currentNumHidden = Int.valueOf(neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).getSize());
         if (numHidden.compareTo(currentNumHidden) != 0){
             neuralNetwork.getArchitecture().getArchitectureBuilder().getLayerConfigurations().get(1).setSize(numHidden.intValue());
@@ -64,21 +62,21 @@ public class HeterogeneousNNArchitectureMSEGeneralisationError implements Measur
         }
 
         // set weight vector from best particle
-        neuralNetwork.setWeights(particle.getBestSolutionWeightVector());
+        neuralNetwork.setWeights(bestParticle.getBestSolutionWeightVector());
 
-        double errorTraining = 0.0;
+        double mse = 0.0;
         OutputErrorVisitor visitor = new OutputErrorVisitor();
         Vector error = null;
-        for (StandardPattern pattern : generalisationSet) {
+        for (StandardPattern pattern : dataset) {
             neuralNetwork.evaluatePattern(pattern);
             visitor.setInput(pattern);
             neuralNetwork.getArchitecture().accept(visitor);
             error = visitor.getOutput();
             for (Numeric real : error) {
-                errorTraining += real.doubleValue() * real.doubleValue();
+                mse += real.doubleValue() * real.doubleValue();
             }
         }
-        errorTraining /= generalisationSet.getNumRows() * error.size();
-        return Real.valueOf(errorTraining);
+        mse /= dataset.getNumRows() * error.size();
+        return Real.valueOf(mse);
     }
 }

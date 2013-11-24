@@ -44,7 +44,8 @@ public enum EntityType {
      */
     public enum HeteroNN {
         NUM_HIDDEN,
-        BEST_BITMASK,
-        BITMASK;
+        BEST_NUM_HIDDEN,
+        BITMASK,
+        BEST_BITMASK;
     }
 }

@@ -80,7 +80,7 @@ public class NNClassificationTrainingError implements Measurement {
      * NN output real value constitutes a correct/incorrect classification
      * @param outputSensitivityThreshold The threshold for NN output classification
      */
-    public void setOuputSensitivityThreshold(ControlParameter outputSensitivityThreshold){
-        this.outputSensitivityThreshold = outputSensitivityThreshold;
+    public void setOuputSensitivityThreshold(double outputSensitivityThreshold){
+        this.outputSensitivityThreshold = ConstantControlParameter.of(outputSensitivityThreshold);
     }
 }

@@ -90,6 +90,7 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
             getLayerConfigurations().
             get(1).getSize();
         this.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden));
+        this.getProperties().put(EntityType.HeteroNN.BEST_NUM_HIDDEN, Int.valueOf(num_hidden));
         this.getProperties().put(EntityType.HeteroNN.BITMASK, Vector.fill(Int.valueOf(1), getCandidateSolution().size()) );
         this.getProperties().put(EntityType.HeteroNN.BEST_BITMASK, Vector.copyOf(this.getBitMask()) );
     }
@@ -109,15 +110,18 @@ public class HeterogeneousNNChargedParticle extends ChargedParticle {
         return true;
     }
 
-    public void setNumHiddenUnits(int num_hidden){
-        this.getProperties().put(EntityType.HeteroNN.NUM_HIDDEN, Int.valueOf(num_hidden));
-    }
-
     /**
      * @return the number of hidden units of this particle's architecture
      */
     public Int getNumHiddenUnits(){
         return (Int) this.getProperties().get(EntityType.HeteroNN.NUM_HIDDEN);
+    }
+
+    /**
+     * @return the number of hidden units of this particle's architecture
+     */
+    public Int getBestNumHiddenUnits(){
+        return (Int) this.getProperties().get(EntityType.HeteroNN.BEST_NUM_HIDDEN);
     }
 
     /**
